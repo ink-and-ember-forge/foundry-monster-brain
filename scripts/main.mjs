@@ -18,8 +18,8 @@ Hooks.once("init", () => {
 
 Hooks.once("ready", () => {
   if (game.system.id !== "pf2e" || !game.user.isGM) return; // GM client only
-  Hooks.on("combatStart", (combat) => onTurnChange(combat));
-  Hooks.on("combatRound", (combat) => onTurnChange(combat));
-  Hooks.on("combatTurn", (combat) => onTurnChange(combat));
+  // PF2e fires these after its own turn-start effects have run (encounter/combatant.ts).
+  Hooks.on("pf2e.startTurn", (combatant, encounter) => onTurnChange(encounter, combatant));
+  Hooks.on("pf2e.endTurn", (_combatant, encounter) => onTurnChange(encounter));
   console.log(`${MODULE_ID} | ready (GM)`);
 });

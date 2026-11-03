@@ -1,19 +1,56 @@
 # Decisions and verification checklist
 
-Tracks the **[VERIFY]** and **[OPEN]** items from `design-brief.md`. Update as each is resolved; record the evidence.
+Tracks the **[VERIFY]** and **[OPEN]** items from `design-brief.md`. Update as each is resolved, with evidence.
 
-## Verify (check against real source before building)
+Evidence base: `foundryvtt/pf2e` `v14-dev` @ `0b3845d` (2026-11-03, system 8.6.1). Paths below are relative to `src/module/`. Re-check on the target branch before relying on any of these in code.
 
-| # | Item | Status | Notes |
-|---|---|---|---|
-| V1 | Target Foundry version(s) | **Provisional** | `module.json` says min/verified 12. On 2026-11-03 `foundryvtt/pf2e` `master` `static/system.json` declared min 12.328, verified 12.331, max 12 (system 6.12.4), which conflicts with the brief's mention of v14 docs. Check current release branches before settling. |
-| V2 | PF2e actor data: HP, conditions, items, reach | Open | Read `foundryvtt/pf2e` source (`src/module/actor/`) |
-| V3 | PF2e chat card flags for strikes/spells/actions | Open | Needed for action auto-detection (step 5) |
-| V4 | Flanking data exposure | Open | v1.1, low priority |
-| V5 | UI framework | Leaning ApplicationV2 | Available from v12 |
-| V6 | Storage | Proposed | Actor flags (profiles, PC tags), combatant flags (encounter overrides), world setting (templates, campaign policies) |
-| V7 | Per-turn action budget | Open | PF2e does not track it; module keeps its own (slowed/quickened adjust) |
+## Verify
+
+| # | Item | Status |
+|---|---|---|
+| V1 | Target Foundry version | **Needs decision** (see V1 below) |
+| V2 | PF2e actor data | **Verified** (see V2) |
+| V3 | Chat card flags | **Verified** (see V3) |
+| V4 | Flanking | **Verified, deferred to v1.1** |
+| V5 | UI framework | Leaning ApplicationV2 |
+| V6 | Storage | Proposed: actor flags (profiles, PC tags), combatant flags (encounter overrides), world setting (templates, campaign policies) |
+| V7 | Per-turn action budget | **Confirmed: module must track its own** |
+
+### V1: Foundry version
+The `foundryvtt/pf2e` branches disagree, which is easy to misread:
+
+| Branch | System | Foundry |
+|---|---|---|
+| `v14-dev` (default branch) | 8.6.1 | min 14.361, verified 14.369 |
+| `v13-dev` | 7.12.2 | min 13.348, verified 13.351 |
+| `release` / `master` | 6.12.4 | 12.328 to 12.331 (stale) |
+
+The live PF2e line is v14. A first read of `master` suggested v12; that was a stale branch. `module.json` is currently set to v12 and should be revisited.
+
+### V2: Actor and token data (PF2e)
+- **HP:** `actor.system.attributes.hp` (`value`, `max`, `temp`).
+- **Conditions:** `actor.hasCondition(...slugs)`; `actor.conditions.bySlug(slug, { active: true })`; `actor.conditions.active`. Slugs are PF2e `ConditionSlug` values (`actor/conditions.ts`, `item/condition/values.ts`).
+- **Reach:** `actor.getReach({ action: "attack", weapon? })` (`actor/creature/document.ts`). Base reach is `attributes.reach.base`; weapon `reach` traits are considered.
+- **Distance:** `token.distanceTo(otherToken, { reach })` (`canvas/token/object.ts`). It measures between squares/cuboids and respects elevation. Passing `reach` makes it reach-aware, so "enemy in melee reach" is `reach >= token.distanceTo(enemy, { reach })`, the same test PF2e uses in `canFlank`. Returns `NaN` if the canvas is not ready.
+- **Allies and enemies:** `actor.alliance` is `"party" | "opposition" | null`; `isAllyOf()` and `isEnemyOf()` exist. **Resolves the brief's [OPEN] on "ally":** use PF2e alliance, not token disposition. Note `isEnemyOf` is false if either side is `null`.
+- **Strikes:** `actor.system.actions` is `AttackAction[]`. `StrikeData` has `label`, `type: "strike"`, `item`, `ready`, `variants` (MAP variants), `altUsages`. Area/auto-fire entries have `type: "area-fire" | "auto-fire"`.
+- **Melee vs ranged (for slot auto-bind):** `strike.item.isMelee` / `isRanged` on both weapon and NPC `melee` items.
+
+### V3: Chat card flags (for auto-detecting actions)
+Under `message.flags.pf2e` (`chat-message/data.ts`):
+- `context.type`: `"attack-roll"`, `"damage-roll"`, `"spell-cast"`, `"skill-check"`, `"area-fire"`, `"auto-fire"`, `"self-effect"`, `"damage-taken"`.
+- `context.actor` and `context.token` identify the actor; `context.item` the item; `origin` has `{ actor, type, uuid }`; `context.target` the target.
+- A Strike is an `attack-roll` then a `damage-roll`: **count only the `attack-roll`** or each strike will register twice.
+- Movement is not a chat card. Detect via `updateToken` on `x`/`y`.
+
+### V4: Flanking (v1.1)
+Available: `token.canFlank(flankee)`, `actor.attributes.flanking.{canFlank, flankable}`. Gated by the PF2e flanking automation setting.
+
+### V7: Action budget
+No per-turn action tracking found in PF2e (`encounter/`, `actor/base.ts`). The module keeps its own. Slowed and quickened handling still to design.
+
+### New: turn hooks
+PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)` (`encounter/combatant.ts`) after its own turn-start effects run. Prefer these over raw `combatTurn`. Note `onStartTurn` runs per represented actor for troops.
 
 ## Open design questions
-
-Ranking (rule order vs weights), adaptive bundle syntax, initial role tags, definition of "ally", built-in policy defaults, template sharing format. See brief section 15.
+Ranking (rule order vs weights), adaptive bundle syntax, initial role tags, built-in policy defaults, template sharing format. "Ally" is now resolved (V2). See brief section 15.
