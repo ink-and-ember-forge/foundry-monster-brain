@@ -12,6 +12,7 @@ export const DEFAULT_RULES = [
       { type: "self-has-condition", slug: "frightened", not: true },
     ],
     do: ["melee-strike", "signature"],
+    limits: { oncePerEncounter: true },
   },
   {
     id: "punish-prone",
@@ -41,3 +42,9 @@ export const DEFAULT_RULES = [
     do: ["melee-strike", "melee-strike"],
   },
 ];
+
+/**
+ * Global policies. Defaults are provisional ([OPEN] in the brief): at most two of the same action
+ * per turn, which discourages "Strike, Strike, Strike".
+ */
+export const DEFAULT_POLICIES = { maxSameActionPerTurn: 2 };

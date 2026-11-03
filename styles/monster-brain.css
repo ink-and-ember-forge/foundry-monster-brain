@@ -4,7 +4,29 @@
 }
 .monster-brain .mb-strip-body {
   font-size: var(--font-size-14, 14px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.monster-brain .mb-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.monster-brain .mb-text {
+  flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.monster-brain button {
+  width: auto;
+  line-height: 1.4;
+  padding: 0 8px;
+}
+.monster-brain .mb-pips { letter-spacing: 2px; margin-right: 4px; }
+.monster-brain .mb-chip { font-size: var(--font-size-12, 12px); }
+.monster-brain .mb-manual { font-style: italic; }
+.monster-brain .mb-suggestion { border-style: dashed; }
+.monster-brain .mb-add { width: auto; height: auto; font-size: var(--font-size-12, 12px); }

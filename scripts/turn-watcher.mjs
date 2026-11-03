@@ -2,20 +2,31 @@ import { MODULE_ID } from "./constants.mjs";
 import { MonsterBrainStrip } from "./panel.mjs";
 import { buildContext } from "./adapter.mjs";
 import { evaluate } from "./engine/evaluate.mjs";
-import { DEFAULT_RULES } from "./engine/default-rules.mjs";
+import { DEFAULT_RULES, DEFAULT_POLICIES } from "./engine/default-rules.mjs";
 import { isMonsterAlliance } from "./engine/suggestion.mjs";
+import { turnActions } from "./engine/history.mjs";
+import { readHistory, panelHandlers } from "./tracker.mjs";
 
 /**
- * Called when a turn starts. Shows the strip on a monster's turn.
- * (Hiding at turn end and on combat deletion is wired in main.mjs.)
+ * Evaluate and show (or hide) the strip for the given combatant.
+ * Runs at turn start and again whenever tracked history changes.
  */
-export async function onTurnChange(combat, startedCombatant = null) {
-  const combatant = startedCombatant ?? combat?.combatant;
+export async function refresh(combat, combatant = combat?.combatant) {
   if (!combatant?.actor || !isMonsterAlliance(combatant.actor.alliance)) {
     return MonsterBrainStrip.hide();
   }
-  const ctx = buildContext(combatant, combat);
-  const { suggestions, held } = evaluate(DEFAULT_RULES, ctx);
+  const history = readHistory(combat);
+  const ctx = buildContext(combatant, combat, history);
+  const { suggestions, held } = evaluate(DEFAULT_RULES, ctx, { policies: DEFAULT_POLICIES });
+  const suggestion = suggestions[0] ?? null;
   console.debug(`${MODULE_ID} | ${combatant.name} r${combat.round}`, { ctx, suggestions, held });
-  return MonsterBrainStrip.show(combatant, suggestions[0] ?? null);
+  const view = {
+    suggestion,
+    turn: {
+      budget: ctx.turn.budget,
+      remaining: ctx.turn.remaining,
+      actions: turnActions(history, combat.round, combatant.id),
+    },
+  };
+  return MonsterBrainStrip.show(combatant, view, panelHandlers(combat, combatant, suggestion));
 }

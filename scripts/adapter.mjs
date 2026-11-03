@@ -1,3 +1,6 @@
+import { actionBudget } from "./engine/budget.mjs";
+import { turnActions, ruleUsesFor } from "./engine/history.mjs";
+
 /**
  * Foundry/PF2e to plain-context adapter. The only place the rules pipeline touches game data.
  * Data paths verified in docs/decisions.md (V2).
@@ -35,8 +38,17 @@ function measure(combat, selfCombatant, other) {
   }
 }
 
-/** @param combatant the monster whose turn it is @param combat the encounter */
-export function buildContext(combatant, combat) {
+/** Condition slug to badge value (1 when the condition has no badge). */
+function conditionValues(actor) {
+  return Object.fromEntries(actor.conditions.active.map((c) => [c.slug, c.value ?? 1]));
+}
+
+/**
+ * @param combatant the monster whose turn it is
+ * @param combat the encounter
+ * @param history this combat's tracked history (see engine/history.mjs)
+ */
+export function buildContext(combatant, combat, history) {
   const actor = combatant.actor;
   const enemies = combat.combatants
     .filter((c) => c.actor && !c.isDefeated && c.id !== combatant.id && actor.isEnemyOf(c.actor))
@@ -47,9 +59,13 @@ export function buildContext(combatant, combat) {
       conditions: conditionSlugs(c.actor),
       ...measure(combat, combatant, c),
     }));
+  const budget = actionBudget(conditionValues(actor));
+  const taken = turnActions(history, combat.round, combatant.id);
   return {
     round: combat.round,
     self: { name: combatant.name, hpPercent: hpPercent(actor), conditions: conditionSlugs(actor) },
     enemies,
+    turn: { budget, remaining: Math.max(0, budget - taken.length), taken },
+    ruleUses: ruleUsesFor(history, combatant.id),
   };
 }

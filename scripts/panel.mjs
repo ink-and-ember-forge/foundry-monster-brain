@@ -1,5 +1,6 @@
 import { MODULE_ID } from "./constants.mjs";
 import { stripText, actionsText } from "./engine/suggestion.mjs";
+import { actionLabel, MANUAL_ACTION_KEYS } from "./engine/actions.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -20,11 +21,16 @@ export class MonsterBrainStrip extends ApplicationV2 {
   /** @type {MonsterBrainStrip|null} */
   static #instance = null;
 
-  /** Show the strip for a combatant and suggestion; reuses a single window. */
-  static async show(combatant, suggestion) {
+  /**
+   * Show the strip; reuses a single window.
+   * @param view { suggestion, turn: { budget, remaining, actions: [{ id, label, source }] } }
+   * @param handlers { onTook(), onRemove(id), onAdd(key) }
+   */
+  static async show(combatant, view, handlers) {
     const app = (this.#instance ??= new this({ position: this.#savedPosition() }));
     app.combatant = combatant;
-    app.suggestion = suggestion;
+    app.view = view;
+    app.handlers = handlers;
     await app.render({ force: true });
     return app;
   }
@@ -60,14 +66,51 @@ export class MonsterBrainStrip extends ApplicationV2 {
   }
 
   async _renderHTML() {
+    const { suggestion, turn } = this.view;
     const el = document.createElement("div");
     el.classList.add("mb-strip-body");
-    el.title = actionsText(this.suggestion);
+
+    // Row 1: the suggestion and the "Took it" button.
+    const head = document.createElement("div");
+    head.classList.add("mb-row");
+    head.title = actionsText(suggestion);
     const name = document.createElement("strong");
     name.textContent = this.combatant?.name ?? "";
     const text = document.createElement("span");
-    text.textContent = stripText(this.suggestion);
-    el.append(name, document.createTextNode(": "), text);
+    text.classList.add("mb-text");
+    text.textContent = turn.remaining <= 0 ? "No actions left this turn" : stripText(suggestion);
+    const took = document.createElement("button");
+    took.type = "button";
+    took.textContent = "Took it";
+    took.disabled = !suggestion;
+    took.addEventListener("click", () => this.handlers.onTook());
+    head.append(name, document.createTextNode(": "), text, took);
+
+    // Row 2: action budget, the log of this turn's actions (click a chip to remove), and manual add.
+    const log = document.createElement("div");
+    log.classList.add("mb-row", "mb-log");
+    const pips = document.createElement("span");
+    pips.classList.add("mb-pips");
+    pips.textContent = `${"\u25CF".repeat(turn.remaining)}${"\u25CB".repeat(Math.max(0, turn.budget - turn.remaining))}`;
+    pips.title = `${turn.remaining} of ${turn.budget} actions left`;
+    log.append(pips);
+    for (const a of turn.actions) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.classList.add("mb-chip", `mb-${a.source}`);
+      chip.textContent = `${a.label} \u00D7`;
+      chip.title = `Remove (${a.source})`;
+      chip.addEventListener("click", () => this.handlers.onRemove(a.id));
+      log.append(chip);
+    }
+    const add = document.createElement("select");
+    add.classList.add("mb-add");
+    add.append(new Option("+ add action", ""));
+    for (const key of MANUAL_ACTION_KEYS) add.append(new Option(actionLabel(key), key));
+    add.addEventListener("change", () => add.value && this.handlers.onAdd(add.value));
+    log.append(add);
+
+    el.append(head, log);
     return el;
   }
 
