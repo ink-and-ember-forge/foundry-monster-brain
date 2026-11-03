@@ -30,3 +30,13 @@
 .monster-brain .mb-manual { font-style: italic; }
 .monster-brain .mb-suggestion { border-style: dashed; }
 .monster-brain .mb-add { width: auto; height: auto; font-size: var(--font-size-12, 12px); }
+.monster-brain .mb-meta { opacity: 0.75; font-size: var(--font-size-12, 12px); }
+.monster-brain .mb-head { justify-content: space-between; }
+.monster-brain .mb-head .mb-meta { flex: 1; }
+.monster-brain .mb-primary { display: flex; flex-direction: column; gap: 3px; padding: 4px 0; }
+.monster-brain .mb-label { font-weight: bold; }
+.monster-brain .mb-hint { font-style: italic; opacity: 0.85; }
+.monster-brain .mb-alt { opacity: 0.8; font-size: var(--font-size-12, 12px); }
+.monster-brain .mb-section summary { cursor: pointer; font-size: var(--font-size-12, 12px); }
+.monster-brain .mb-section ul { margin: 2px 0 2px 16px; padding: 0; font-size: var(--font-size-12, 12px); }
+.monster-brain .mb-toggle { padding: 0 6px; }

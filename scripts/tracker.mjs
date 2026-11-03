@@ -73,9 +73,9 @@ export function onUpdateToken(tokenDoc, changes) {
 }
 
 /** Handlers the panel calls. All writes trigger updateCombat, which re-evaluates the suggestion. */
-export function panelHandlers(combat, combatant, suggestion) {
+export function panelHandlers(combat, combatant) {
   return {
-    onTook: () =>
+    onTook: (suggestion) =>
       suggestion &&
       write(combat, (h) => {
         let next = h;

@@ -1,7 +1,17 @@
 import { describe, it, expect } from "vitest";
 import { evaluate, actionLabel } from "../scripts/engine/evaluate.mjs";
 import { DEFAULT_RULES } from "../scripts/engine/default-rules.mjs";
-import { stripText, actionsText, isMonsterAlliance } from "../scripts/engine/suggestion.mjs";
+import {
+  stripText,
+  actionsText,
+  isMonsterAlliance,
+  pipsText,
+  whyLines,
+  heldLines,
+  warningLines,
+  nextIndex,
+  alternativeOf,
+} from "../scripts/engine/suggestion.mjs";
 
 const enemy = (over = {}) => ({ id: "e1", name: "Mira", hpPercent: 100, conditions: [], distance: 30, inReach: false, ...over });
 const ctx = (over = {}) => ({
@@ -151,6 +161,17 @@ describe("close-in default rule", () => {
   });
 });
 
+describe("suggestion metadata", () => {
+  it("carries why, source and hint for the card", () => {
+    const rules = [{ id: "r", label: "R", source: "creature", hint: "Back off 15 ft", when: [{ type: "round", op: ">=", value: 2 }], do: [] }];
+    const s = evaluate(rules, ctx()).suggestions[0];
+    expect(s).toMatchObject({ why: ["round >= 2"], source: "creature", hint: "Back off 15 ft" });
+  });
+  it("defaults to no source or hint", () => {
+    expect(evaluate([{ id: "r", when: [], do: [] }], ctx()).suggestions[0]).toMatchObject({ why: [], source: null, hint: null });
+  });
+});
+
 describe("presentation", () => {
   it("strip text", () => {
     expect(stripText({ label: "X", target: null })).toBe("X");
@@ -162,5 +183,35 @@ describe("presentation", () => {
     expect(isMonsterAlliance("opposition")).toBe(true);
     expect(isMonsterAlliance("party")).toBe(false);
     expect(isMonsterAlliance(null)).toBe(false);
+  });
+});
+
+describe("card text helpers", () => {
+  it("pips: filled for left, hollow for spent, clamped", () => {
+    expect(pipsText(2, 3)).toBe("\u25CF\u25CF\u25CB");
+    expect(pipsText(0, 3)).toBe("\u25CB\u25CB\u25CB");
+    expect(pipsText(5, 3)).toBe("\u25CF\u25CF\u25CF");
+    expect(pipsText(-1, 2)).toBe("\u25CB\u25CB");
+  });
+  it("why lines show the rule, its layer and satisfied conditions", () => {
+    expect(whyLines({ label: "Volley", source: "template", why: ["round == 1"] })).toEqual(["Rule: Volley (template layer)", "\u2713 round == 1"]);
+    expect(whyLines({ label: "Fallback", source: null, why: [] })).toEqual(["Rule: Fallback", "\u2713 no conditions (always applies)"]);
+    expect(whyLines(null)).toEqual([]);
+  });
+  it("held and warning lines", () => {
+    expect(heldLines([{ id: "a", label: "A", reasons: ["x", "y"] }, { id: "b", reasons: ["z"] }])).toEqual(["A: x; y", "b: z"]);
+    expect(warningLines([{ ruleId: "a", message: "m" }, { ruleId: null, message: "n" }])).toEqual(["a: m", "n"]);
+    expect(heldLines()).toEqual([]);
+  });
+  it("Something else cycles and wraps; alternative is the next one", () => {
+    expect(nextIndex(0, 3)).toBe(1);
+    expect(nextIndex(2, 3)).toBe(0);
+    expect(nextIndex(0, 1)).toBe(0);
+    expect(nextIndex(0, 0)).toBe(0);
+    const s = [{ id: "a" }, { id: "b" }, { id: "c" }];
+    expect(alternativeOf(s, 0).id).toBe("b");
+    expect(alternativeOf(s, 2).id).toBe("a");
+    expect(alternativeOf([{ id: "a" }], 0)).toBeNull();
+    expect(alternativeOf([], 0)).toBeNull();
   });
 });

@@ -112,7 +112,8 @@ function compareCandidates(a, b) {
 
 /**
  * @returns {{ suggestions: Suggestion[], held: { id: string, label: string, reasons: string[] }[], remaining: number }}
- * @typedef {{ id: string, label: string, actions: string[], slugs: string[], target: string|null }} Suggestion
+ * @typedef {{ id: string, label: string, actions: string[], slugs: string[], target: string|null,
+ *   why: string[], source: string|null, hint: string|null }} Suggestion
  */
 export function evaluate(rules, ctx, { max = 2, policies = {} } = {}) {
   const remaining = ctx.turn?.remaining ?? DEFAULT_REMAINING;
@@ -143,6 +144,9 @@ export function evaluate(rules, ctx, { max = 2, policies = {} } = {}) {
     label: rule.label ?? rule.id,
     slugs: bundle,
     actions: bundle.map((slug) => slotLabel(slug, ctx)),
+    why: (rule.when ?? []).map(describeCondition),
+    source: rule.source ?? null,
+    hint: rule.hint ?? null,
     target: target?.name ?? null,
   }));
   return { suggestions, held, remaining };

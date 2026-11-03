@@ -1,14 +1,39 @@
 import { MODULE_ID } from "./constants.mjs";
-import { stripText, actionsText } from "./engine/suggestion.mjs";
+import {
+  stripText,
+  actionsText,
+  pipsText,
+  whyLines,
+  heldLines,
+  warningLines,
+  nextIndex,
+  alternativeOf,
+} from "./engine/suggestion.mjs";
 import { actionLabel, MANUAL_ACTION_KEYS } from "./engine/actions.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
 
-const WIDTH = 360;
+const WIDTH = 380;
+
+function el(tag, { cls, text, title, attrs } = {}) {
+  const node = document.createElement(tag);
+  if (cls) node.classList.add(...[].concat(cls).flatMap((c) => c.split(/\s+/)).filter(Boolean));
+  if (text != null) node.textContent = text;
+  if (title) node.title = title;
+  for (const [k, v] of Object.entries(attrs ?? {})) node.setAttribute(k, v);
+  return node;
+}
+
+function button(text, onClick, { title, disabled, cls } = {}) {
+  const b = el("button", { text, title, cls, attrs: { type: "button" } });
+  b.disabled = !!disabled;
+  b.addEventListener("click", onClick);
+  return b;
+}
 
 /**
- * Slim GM-only strip. Uses only ApplicationV2 APIs present in Foundry v13 and v14,
- * and renders without Handlebars to keep that surface small.
+ * GM-only panel: a slim one-line strip, expandable to the full card (brief section 11).
+ * Uses only ApplicationV2 APIs present in Foundry v13 and v14, and renders without Handlebars.
  */
 export class MonsterBrainStrip extends ApplicationV2 {
   static DEFAULT_OPTIONS = {
@@ -21,13 +46,30 @@ export class MonsterBrainStrip extends ApplicationV2 {
   /** @type {MonsterBrainStrip|null} */
   static #instance = null;
 
+  /** Which of the evaluated suggestions "Something else" has cycled to. */
+  index = 0;
+  viewKey = null;
+  /** Which collapsible sections are open (survives re-render). */
+  openSections = new Set();
+  expanded = (() => {
+    try {
+      return game.settings.get(MODULE_ID, "stripExpanded") === true;
+    } catch {
+      return false;
+    }
+  })();
+
   /**
-   * Show the strip; reuses a single window.
-   * @param view { suggestion, turn: { budget, remaining, actions: [{ id, label, source }] } }
-   * @param handlers { onTook(), onRemove(id), onAdd(key) }
+   * @param view { key, suggestions, held, warnings, templateName, round,
+   *               turn: { budget, remaining, actions: [{ id, label, source }] } }
+   * @param handlers { onTook(suggestion), onRemove(id), onAdd(key) }
    */
   static async show(combatant, view, handlers) {
     const app = (this.#instance ??= new this({ position: this.#savedPosition() }));
+    if (app.viewKey !== view.key) {
+      app.index = 0;
+      app.viewKey = view.key;
+    }
     app.combatant = combatant;
     app.view = view;
     app.handlers = handlers;
@@ -65,53 +107,113 @@ export class MonsterBrainStrip extends ApplicationV2 {
     return result;
   }
 
+  #toggleExpanded() {
+    this.expanded = !this.expanded;
+    game.settings.set(MODULE_ID, "stripExpanded", this.expanded);
+    this.render({ force: true });
+  }
+
   async _renderHTML() {
-    const { suggestion, turn } = this.view;
-    const el = document.createElement("div");
-    el.classList.add("mb-strip-body");
+    const { suggestions } = this.view;
+    const shown = suggestions[this.index % Math.max(1, suggestions.length)] ?? null;
+    const out = el("div", { cls: "mb-strip-body" });
+    out.append(this.expanded ? this.#card(shown) : this.#line(shown));
+    return out;
+  }
 
-    // Row 1: the suggestion and the "Took it" button.
-    const head = document.createElement("div");
-    head.classList.add("mb-row");
-    head.title = actionsText(suggestion);
-    const name = document.createElement("strong");
-    name.textContent = this.combatant?.name ?? "";
-    const text = document.createElement("span");
-    text.classList.add("mb-text");
-    text.textContent = turn.remaining <= 0 ? "No actions left this turn" : stripText(suggestion);
-    const took = document.createElement("button");
-    took.type = "button";
-    took.textContent = "Took it";
-    took.disabled = !suggestion;
-    took.addEventListener("click", () => this.handlers.onTook());
-    head.append(name, document.createTextNode(": "), text, took);
+  #primaryText(shown) {
+    return this.view.turn.remaining <= 0 ? "No actions left this turn" : stripText(shown);
+  }
 
-    // Row 2: action budget, the log of this turn's actions (click a chip to remove), and manual add.
-    const log = document.createElement("div");
-    log.classList.add("mb-row", "mb-log");
-    const pips = document.createElement("span");
-    pips.classList.add("mb-pips");
-    pips.textContent = `${"\u25CF".repeat(turn.remaining)}${"\u25CB".repeat(Math.max(0, turn.budget - turn.remaining))}`;
-    pips.title = `${turn.remaining} of ${turn.budget} actions left`;
-    log.append(pips);
-    for (const a of turn.actions) {
-      const chip = document.createElement("button");
-      chip.type = "button";
-      chip.classList.add("mb-chip", `mb-${a.source}`);
-      chip.textContent = `${a.label} \u00D7`;
-      chip.title = `Remove (${a.source})`;
-      chip.addEventListener("click", () => this.handlers.onRemove(a.id));
-      log.append(chip);
+  /** Collapsed: one line. */
+  #line(shown) {
+    const { turn } = this.view;
+    const row = el("div", { cls: "mb-row", title: actionsText(shown) });
+    row.append(
+      el("strong", { text: this.combatant?.name ?? "" }),
+      document.createTextNode(": "),
+      el("span", { cls: "mb-text", text: this.#primaryText(shown) }),
+      el("span", { cls: "mb-pips", text: pipsText(turn.remaining, turn.budget), title: `${turn.remaining} of ${turn.budget} actions left` }),
+      button("Took it", () => this.handlers.onTook(shown), { disabled: !shown || turn.remaining <= 0 }),
+      button("▾", () => this.#toggleExpanded(), { title: "Expand", cls: "mb-toggle" }),
+    );
+    return row;
+  }
+
+  /** Expanded: the full card. */
+  #card(shown) {
+    const { suggestions, held, warnings, templateName, round, turn } = this.view;
+    const card = el("div", { cls: "mb-card" });
+
+    const head = el("div", { cls: "mb-row mb-head" });
+    head.append(
+      el("strong", { text: this.combatant?.name ?? "" }),
+      el("span", { cls: "mb-meta", text: `${templateName ?? "no template"} · round ${round}` }),
+      el("span", { cls: "mb-pips", text: pipsText(turn.remaining, turn.budget), title: `${turn.remaining} of ${turn.budget} actions left` }),
+      button("▴", () => this.#toggleExpanded(), { title: "Collapse", cls: "mb-toggle" }),
+    );
+    card.append(head);
+
+    // Primary suggestion.
+    const primary = el("div", { cls: "mb-primary" });
+    if (turn.remaining <= 0) primary.append(el("div", { cls: "mb-label", text: "No actions left this turn" }));
+    else if (!shown) primary.append(el("div", { cls: "mb-label", text: "No suggestion" }));
+    else {
+      primary.append(el("div", { cls: "mb-label", text: shown.label }));
+      if (shown.actions.length) primary.append(el("div", { text: actionsText(shown) }));
+      if (shown.target) primary.append(el("div", { text: `Target: ${shown.target}` }));
+      if (shown.hint) primary.append(el("div", { cls: "mb-hint", text: shown.hint }));
     }
-    const add = document.createElement("select");
-    add.classList.add("mb-add");
+    const buttons = el("div", { cls: "mb-row" });
+    buttons.append(
+      button("Took suggestion", () => this.handlers.onTook(shown), { disabled: !shown || turn.remaining <= 0 }),
+      button(
+        "Something else",
+        () => {
+          this.index = nextIndex(this.index, suggestions.length);
+          this.render({ force: true });
+        },
+        { disabled: suggestions.length < 2 },
+      ),
+    );
+    primary.append(buttons);
+    card.append(primary);
+
+    const alt = alternativeOf(suggestions, this.index);
+    if (alt) card.append(el("div", { cls: "mb-alt", text: `Alternative: ${stripText(alt)}`, title: actionsText(alt) }));
+
+    // This turn's action log: click a chip to remove it; add what was not detected.
+    const log = el("div", { cls: "mb-row mb-log" });
+    log.append(el("span", { cls: "mb-meta", text: "This turn:" }));
+    if (turn.actions.length === 0) log.append(el("span", { cls: "mb-meta", text: "nothing yet" }));
+    for (const a of turn.actions) {
+      log.append(button(`${a.label} ×`, () => this.handlers.onRemove(a.id), { cls: ["mb-chip", `mb-${a.source}`], title: `Remove (${a.source})` }));
+    }
+    const add = el("select", { cls: "mb-add" });
     add.append(new Option("+ add action", ""));
     for (const key of MANUAL_ACTION_KEYS) add.append(new Option(actionLabel(key), key));
     add.addEventListener("change", () => add.value && this.handlers.onAdd(add.value));
     log.append(add);
+    card.append(log);
 
-    el.append(head, log);
-    return el;
+    card.append(
+      this.#section("why", "Why this one", whyLines(shown)),
+      this.#section("held", `Held back (${held.length})`, heldLines(held)),
+    );
+    if (warnings.length) card.append(this.#section("warn", `Warnings (${warnings.length})`, warningLines(warnings)));
+    return card;
+  }
+
+  /** A collapsible list; open state is remembered across re-renders. */
+  #section(id, title, lines) {
+    const details = el("details", { cls: "mb-section" });
+    details.open = this.openSections.has(id);
+    details.addEventListener("toggle", () => (details.open ? this.openSections.add(id) : this.openSections.delete(id)));
+    details.append(el("summary", { text: title }));
+    const list = el("ul");
+    for (const line of lines.length ? lines : ["nothing"]) list.append(el("li", { text: line }));
+    details.append(list);
+    return details;
   }
 
   _replaceHTML(result, content) {

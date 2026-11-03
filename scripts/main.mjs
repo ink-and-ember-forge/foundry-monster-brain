@@ -20,6 +20,7 @@ Hooks.once("init", () => {
     type: Object,
     default: null,
   });
+  game.settings.register(MODULE_ID, "stripExpanded", { scope: "client", config: false, type: Boolean, default: false });
   profiles.registerSettings();
   // Console API until the editor exists: game.modules.get("monster-brain").api
   game.modules.get(MODULE_ID).api = { ...profiles, explain };

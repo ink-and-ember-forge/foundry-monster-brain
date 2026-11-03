@@ -71,6 +71,7 @@ PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)
 - **Slots:** derived from the `do` lists of enabled rules (plus any declared), excluding movement (`stride`, `stride-away`). Strike slots auto-bind to the first matching strike in `actor.system.actions`; other slots are never guessed. A GM binding (`slotBindings`: slot to item id) always wins. A rule needing a strike slot the creature cannot fill is **held back** (the creature lacks that attack); other unbound slots only **warn** and the rule stays with a generic label.
 - **Storage (V6, as built):** creature profile in a flag on the base actor (shared by all tokens); encounter overrides in a combatant flag; templates and campaign in world settings. Layers are replaced by unset-then-set, because flags merge on write.
 - **Validation (partial):** unknown condition, unbound or missing slot binding, empty `do`, `oncePerEncounter` with other limits, unknown disable target, duplicate id in a layer, missing template. Not yet: unreachable rules.
+- **Expanded card (build step 7):** the strip collapses to one line (name, suggestion, pips, Took it, expand). Expanded shows template and round, the primary suggestion with actions/target/hint, one alternative, "Took suggestion" and "Something else", this turn's log with add/remove, and collapsible "Why this one", "Held back (n)" and "Warnings (n)". The engine returns up to three suggestions; "Something else" cycles through them and resets whenever the evaluation context changes. Expanded state and open sections are remembered (client setting / in memory). `hint` is an optional string on a rule.
 - **Context shape:** `{ round, self: { name, hpPercent, conditions[] }, enemies: [{ id, name, hpPercent, conditions[] }] }`, built by `scripts/adapter.mjs`. Defined in `scripts/engine/conditions.mjs`.
 
 ## Build progress
@@ -83,7 +84,8 @@ PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)
 | 4. Targets and role tags | Stub only: enemy conditions narrow targets, then lowest HP. |
 | 5. Action tracking, log, correction | **Done in strip UI** (chat cards and movement; untested live). Expanded card is step 7. |
 | 6. Policies and limits | **Done** (`oncePerEncounter`, `maxPerTurn`, `cooldownRounds`; `maxSameActionPerTurn`). Policy defaults still provisional. |
-| 7-8 | Not started |
+| 7. Expanded card, why / held back | **Done** (DOM smoke-tested with jsdom; not yet seen in Foundry). |
+| 8. Form editor, dry-run, starter templates | Not started. Authoring is via the console API meanwhile. |
 
 Known gaps: the adapter, tracker and panel (`scripts/adapter.mjs`, `tracker.mjs`, `panel.mjs`) are untested outside Foundry; spells always cost one tracked action (3-action spells and metamagic are not modelled; correct via the log); a Strike made as a reaction on the monster's own turn is indistinguishable and counts; action slots are shown as plain labels (no binding to real items).
 

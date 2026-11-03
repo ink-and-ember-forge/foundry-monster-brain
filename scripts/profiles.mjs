@@ -58,5 +58,5 @@ export function resolveFor(combatant) {
   if (profile?.template && !template) {
     warnings.push({ level: "warn", ruleId: null, message: `template "${profile.template}" does not exist` });
   }
-  return { resolved, binding, warnings };
+  return { resolved, binding, warnings, profile };
 }

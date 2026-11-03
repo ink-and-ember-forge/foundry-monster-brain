@@ -10,13 +10,13 @@ import { resolveFor } from "./profiles.mjs";
 /** Everything the pipeline produces for a combatant right now. Also backs the console `explain` API. */
 export function compute(combat, combatant) {
   const history = readHistory(combat);
-  const { resolved, binding, warnings } = resolveFor(combatant);
+  const { resolved, binding, warnings, profile } = resolveFor(combatant);
   const ctx = {
     ...buildContext(combatant, combat, history),
     slots: { bound: binding.bound, unbound: binding.unbound },
   };
-  const result = evaluate(resolved.rules, ctx, { policies: resolved.policies });
-  return { history, ctx, result, resolved, binding, warnings };
+  const result = evaluate(resolved.rules, ctx, { policies: resolved.policies, max: 3 });
+  return { history, ctx, result, resolved, binding, warnings, templateName: profile?.template ?? null };
 }
 
 /**
@@ -27,18 +27,20 @@ export async function refresh(combat, combatant = combat?.combatant) {
   if (!combatant?.actor || !isMonsterAlliance(combatant.actor.alliance)) {
     return MonsterBrainStrip.hide();
   }
-  const { history, ctx, result, warnings } = compute(combat, combatant);
-  const suggestion = result.suggestions[0] ?? null;
+  const { history, ctx, result, warnings, templateName } = compute(combat, combatant);
   console.debug(`${MODULE_ID} | ${combatant.name} r${combat.round}`, { ctx, ...result, warnings });
+  const actions = turnActions(history, combat.round, combatant.id);
   const view = {
-    suggestion,
-    turn: {
-      budget: ctx.turn.budget,
-      remaining: ctx.turn.remaining,
-      actions: turnActions(history, combat.round, combatant.id),
-    },
+    // Changes whenever the evaluation context changes, which resets the "Something else" choice.
+    key: `${combatant.id}:${combat.round}:${actions.length}:${result.suggestions[0]?.id ?? ""}`,
+    suggestions: result.suggestions,
+    held: result.held,
+    warnings,
+    templateName,
+    round: combat.round,
+    turn: { budget: ctx.turn.budget, remaining: ctx.turn.remaining, actions },
   };
-  return MonsterBrainStrip.show(combatant, view, panelHandlers(combat, combatant, suggestion));
+  return MonsterBrainStrip.show(combatant, view, panelHandlers(combat, combatant));
 }
 
 /** Console helper: what would the module say for the current combatant, and why. */
