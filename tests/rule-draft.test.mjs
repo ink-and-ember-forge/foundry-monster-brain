@@ -113,8 +113,10 @@ describe("rule editing", () => {
     expect(d.ruleSentence(r)).toBe(
       "When NOT (an enemy is within my reach) and an enemy is within 60 ft: Ranged strike, then Ranged strike. Target: prefer caster, then lowest HP (max 1 per turn; then wait 2 rounds)",
     );
-    expect(d.ruleSentence({ id: "x", when: [], do: [] })).toBe("Always: (no actions)");
-    expect(d.ruleSentence({ id: "x", do: ["stride"], limits: { oncePerEncounter: true, cooldownRounds: 1 } })).toBe("Always: Stride (once per encounter; then wait 1 round)");
+    expect(d.ruleSentence({ id: "x", when: [], do: [] })).toBe("Always: (no actions). Target: in reach, then lowest HP (default)");
+    expect(d.ruleSentence({ id: "x", do: ["stride"], limits: { oncePerEncounter: true, cooldownRounds: 1 } })).toBe(
+      "Always: Stride. Target: in reach, then lowest HP (default) (once per encounter; then wait 1 round)",
+    );
   });
   it("an edited rule behaves as described when evaluated", () => {
     let r = d.newRule([], "Pounce");

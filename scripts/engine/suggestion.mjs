@@ -1,8 +1,8 @@
 /** Small pure helpers for presenting suggestions. */
 
 /** One-line text for the slim strip. */
-export function stripText(suggestion) {
-  if (!suggestion) return "No suggestion";
+export function stripText(suggestion, { noEnemies = false } = {}) {
+  if (!suggestion) return noEnemies ? "No enemies to target" : "No suggestion";
   return suggestion.target ? `${suggestion.label} → ${suggestion.target}` : suggestion.label;
 }
 

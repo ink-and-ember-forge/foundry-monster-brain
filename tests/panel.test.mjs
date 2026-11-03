@@ -67,6 +67,13 @@ describe("collapsed strip", () => {
     expect(app.lastRender.textContent).toContain("No suggestion");
     expect(btn(app.lastRender, "Took it").disabled).toBe(true);
   });
+  it("says 'No enemies to target' when there is nobody to aim at, not just 'No suggestion'", async () => {
+    const app = await open(makeView({ suggestions: [], noEnemies: true }), handlers(), false);
+    expect(app.lastRender.textContent).toContain("No enemies to target");
+    const card = await open(makeView({ suggestions: [], noEnemies: true }), handlers(), true);
+    expect(card.lastRender.textContent).toContain("No enemies to target");
+    expect(card.lastRender.textContent).not.toContain("No suggestion");
+  });
   it("expands and remembers the choice", async () => {
     const app = await open(makeView(), handlers(), false);
     btn(app.lastRender, "▾").click();

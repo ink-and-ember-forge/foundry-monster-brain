@@ -87,7 +87,7 @@ Deferred: flanked / can flank (v1.1), line of sight, cover.
 - Enemies are, from the monster's perspective, tokens hostile to it (normally the PCs and their allies).
 - **Role tags** live on PC actors as campaign defaults, with **per-encounter overrides** on the combatant.
 - A selector is an ordered list: tag preferences first, then a tiebreaker (nearest, lowest HP, etc.).
-- If the module cannot choose a target, the suggestion shows the action only and the GM picks.
+- If the module cannot choose a target, the suggestion shows the action only and the GM picks. *(As built, at the GM's request: every suggestion names a target, using a default when a rule gives none; with no enemies there is no suggestion. See `docs/decisions.md`.)*
 
 ## 8. Customisation cascade
 

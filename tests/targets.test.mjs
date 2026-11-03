@@ -19,9 +19,11 @@ const name = (t) => t?.name ?? null;
 
 describe("pickTarget", () => {
   const party = [e("Tank", 100, { roles: ["frontliner"] }), e("Mage", 80, { roles: ["caster"] }), e("Cleric", 30, { roles: ["healer"] }), e("Rogue", 20, { roles: ["squishy"] })];
-  it("defaults to lowest HP", () => {
+  it("defaults to in reach first, then lowest HP", () => {
+    expect(DEFAULT_SELECTOR).toEqual(["in-reach", "lowest-hp"]);
     expect(name(pickTarget(party))).toBe("Rogue");
-    expect(DEFAULT_SELECTOR).toEqual(["lowest-hp"]);
+    const withReach = [...party.slice(0, 2), e("Cleric", 30, { roles: ["healer"], inReach: true }), party[3]];
+    expect(name(pickTarget(withReach))).toBe("Cleric");
   });
   it("casters first, then lowest HP", () => {
     expect(name(pickTarget(party, ["role:caster", "lowest-hp"]))).toBe("Mage");
@@ -113,13 +115,13 @@ describe("targets in evaluation", () => {
     const s = evaluate([r], ctx([e("Mage", 90, { roles: ["caster"] }), e("Rogue", 10, { conditions: ["prone"] })])).suggestions[0];
     expect(s.target).toBe("Rogue");
   });
-  it("narrowing without a selector falls back to lowest HP, with a reason", () => {
+  it("narrowing without a selector uses the default, and says so", () => {
     const r = { id: "r", when: [{ type: "enemy-has-condition", slug: "prone" }], do: [] };
     const s = evaluate([r], ctx([e("A", 80, { conditions: ["prone"] }), e("B", 20, { conditions: ["prone"] })])).suggestions[0];
-    expect(s).toMatchObject({ target: "B", targetWhy: "lowest HP" });
+    expect(s).toMatchObject({ target: "B", targetWhy: "in reach, then lowest HP (default)" });
   });
-  it("no selector and no narrowing: action only", () => {
-    expect(evaluate([{ id: "r", when: [], do: [] }], ctx([e("A", 80)])).suggestions[0]).toMatchObject({ target: null, targetWhy: null });
+  it("no selector and no narrowing still names a target (the default)", () => {
+    expect(evaluate([{ id: "r", when: [], do: [] }], ctx([e("A", 80)])).suggestions[0]).toMatchObject({ target: "A", targetWhy: "in reach, then lowest HP (default)" });
   });
   it("the shipped close-in rule prefers casters", () => {
     const res = evaluate(DEFAULT_RULES, { ...ctx([e("Rogue", 10), e("Mage", 90, { roles: ["caster"] })]), round: 3 });

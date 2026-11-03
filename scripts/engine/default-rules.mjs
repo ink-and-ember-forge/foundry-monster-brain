@@ -1,7 +1,9 @@
 /**
- * Built-in rules used until the data model and cascade exist (build step 3).
- * Uses only conditions implemented so far. Limits (e.g. once per encounter) arrive in step 6,
- * so "last-stand" will currently be suggested every turn while its conditions hold.
+ * Every rule names its own target preference: a suggestion always has a target (see evaluate.mjs),
+ * and a rule that leaned on the default would hide what it is aimed at.
+ *
+ * The shipped (lowest) cascade layer: rules every template and creature builds on. A template can
+ * replace one by reusing its id, or switch it off with `disable`.
  */
 export const DEFAULT_RULES = [
   {
@@ -12,6 +14,7 @@ export const DEFAULT_RULES = [
       { type: "self-has-condition", slug: "frightened", not: true },
     ],
     do: ["melee-strike", "signature"],
+    target: ["in-reach", "lowest-hp"],
     limits: { oncePerEncounter: true },
   },
   {
@@ -19,12 +22,14 @@ export const DEFAULT_RULES = [
     label: "Punish the prone",
     when: [{ type: "enemy-has-condition", slug: "prone" }],
     do: ["melee-strike", "melee-strike"],
+    target: ["in-reach", "lowest-hp"],
   },
   {
     id: "opening-signature",
     label: "Open with signature",
     when: [{ type: "round", op: "==", value: 1 }],
     do: ["signature", "melee-strike"],
+    target: ["in-reach", "nearest"],
   },
   {
     id: "close-in",
@@ -41,6 +46,7 @@ export const DEFAULT_RULES = [
     label: "Strike, strike",
     when: [],
     do: ["melee-strike", "melee-strike"],
+    target: ["in-reach", "nearest"],
   },
 ];
 

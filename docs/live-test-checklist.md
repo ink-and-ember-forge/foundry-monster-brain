@@ -54,6 +54,12 @@ Everything since build step 1 has only been tested against stand-in objects, so 
 - [ ] "Clear" then Save at default scope removes the character's roles.
 - [ ] The "In effect now" line matches what actually happens.
 
+## 5e. Every suggestion has a target
+- [ ] Across a few turns of different styles, no suggestion ever shows without a target (strip: "Flee → Mira"; card: "Target: Mira (...)").
+- [ ] Coward's Flee names the enemy it's running from, and the hint reads sensibly with that.
+- [ ] A rule you wrote with no target preferences shows its target as "(default)" in "Why this one".
+- [ ] Remove/defeat every enemy: the strip says "No enemies to target" instead of inventing a suggestion. (If it says this while hostile tokens are on the map, tell me: that's an alliance or defeated-flag problem.)
+
 ## 5d. The ten fighting styles
 Pick two or three styles that match monsters you actually run, put each on a token, and watch a few turns:
 - [ ] Does each one behave like its name says (Brawler charges, Duelist waits for an opening, Ambusher opens big then hides, Swarmer just rushes)?

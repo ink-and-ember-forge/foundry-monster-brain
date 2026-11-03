@@ -107,7 +107,7 @@ export class MonsterBrainStrip extends ApplicationV2 {
   }
 
   #primaryText(shown) {
-    return this.view.turn.remaining <= 0 ? "No actions left this turn" : stripText(shown);
+    return this.view.turn.remaining <= 0 ? "No actions left this turn" : stripText(shown, { noEnemies: this.view.noEnemies });
   }
 
   /** Collapsed: one line. */
@@ -142,7 +142,7 @@ export class MonsterBrainStrip extends ApplicationV2 {
     // Primary suggestion.
     const primary = el("div", { cls: "mb-primary" });
     if (turn.remaining <= 0) primary.append(el("div", { cls: "mb-label", text: "No actions left this turn" }));
-    else if (!shown) primary.append(el("div", { cls: "mb-label", text: "No suggestion" }));
+    else if (!shown) primary.append(el("div", { cls: "mb-label", text: stripText(null, { noEnemies: this.view.noEnemies }) }));
     else {
       primary.append(el("div", { cls: "mb-label", text: shown.label }));
       if (shown.actions.length) primary.append(el("div", { text: actionsText(shown) }));

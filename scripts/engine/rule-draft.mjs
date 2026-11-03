@@ -5,7 +5,7 @@
 import { CONDITION_SCHEMA, LIMIT_FIELDS } from "./schema.mjs";
 import { describeCondition } from "./conditions.mjs";
 import { actionLabel } from "./actions.mjs";
-import { describeSelector } from "./targets.mjs";
+import { describeSelector, DEFAULT_SELECTOR } from "./targets.mjs";
 import { resolveProfile } from "./cascade.mjs";
 import { validate } from "./validate.mjs";
 import { SYSTEM_LAYER } from "./default-rules.mjs";
@@ -151,14 +151,16 @@ export function setLimit(rule, key, raw) {
 export function ruleSentence(rule) {
   const when = (rule.when ?? []).length ? `When ${rule.when.map(describeCondition).join(" and ")}` : "Always";
   const doing = (rule.do ?? []).length ? (rule.do ?? []).map(actionLabel).join(", then ") : "(no actions)";
-  const target = (rule.target ?? []).length ? describeSelector(rule.target) : "";
+  // Every suggestion has a target; a rule with no preferences of its own uses the default.
+  const own = (rule.target ?? []).length > 0;
+  const target = describeSelector(own ? rule.target : DEFAULT_SELECTOR) + (own ? "" : " (default)");
   const l = rule.limits ?? {};
   const limits = [
     l.oncePerEncounter && "once per encounter",
     l.maxPerTurn != null && `max ${l.maxPerTurn} per turn`,
     l.cooldownRounds != null && `then wait ${l.cooldownRounds} round${l.cooldownRounds === 1 ? "" : "s"}`,
   ].filter(Boolean);
-  return `${when}: ${doing}${target ? `. Target: ${target}` : ""}${limits.length ? ` (${limits.join("; ")})` : ""}`;
+  return `${when}: ${doing}. Target: ${target}${limits.length ? ` (${limits.join("; ")})` : ""}`;
 }
 
 // ---- templates -----------------------------------------------------------------------------------

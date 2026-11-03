@@ -275,19 +275,43 @@ describe("Swarmer", () => {
   });
 });
 
-describe("every template always has something to suggest", () => {
+describe("every template always has something to suggest, and always names a target", () => {
   const scenes = {
-    "nobody around": [],
     "one enemy far off": [e("A", 50, { distance: 90 })],
     "one enemy adjacent": [adjacent("A", 50)],
+    "a crowd": [adjacent("A", 50), e("B", 20, { distance: 30, roles: ["caster"] }), e("C", 90, { distance: 70, conditions: ["prone"] })],
   };
   for (const id of STARTER_TEMPLATE_IDS) {
     for (const [name, enemies] of Object.entries(scenes)) {
-      it(`${id}: ${name}`, () => {
-        const r = run(id, { enemies, round: 2 });
-        expect(r.suggestions.length, JSON.stringify(r.held)).toBeGreaterThan(0);
-      });
+      for (const self of [{}, { hpPercent: 10 }, { conditions: ["frightened"] }]) {
+        for (const round of [1, 3]) {
+          it(`${id}: ${name}, round ${round}, ${JSON.stringify(self)}`, () => {
+            const r = run(id, { enemies, round, self });
+            expect(r.suggestions.length, JSON.stringify(r.held)).toBeGreaterThan(0);
+            for (const s of r.suggestions) {
+              expect(typeof s.target, `${s.id} has no target`).toBe("string");
+              expect(s.targetWhy, s.id).toBeTruthy();
+            }
+          });
+        }
+      }
     }
+    it(`${id}: with nobody to target, nothing is suggested (and each rule says why)`, () => {
+      const r = run(id, { enemies: [], round: 2 });
+      expect(r.suggestions).toEqual([]);
+      expect(r.held.filter((h) => h.reasons.includes("no valid target")).length).toBeGreaterThan(0);
+    });
+  }
+});
+
+describe("rules declare their own target rather than leaning on the default", () => {
+  it("every shipped default rule has an explicit target", () => {
+    for (const rule of SYSTEM_LAYER.rules) expect(rule.target?.length, rule.id).toBeGreaterThan(0);
+  });
+  for (const id of STARTER_TEMPLATE_IDS) {
+    it(`${id}: every rule has an explicit target`, () => {
+      for (const rule of STARTER_TEMPLATES[id].rules) expect(rule.target?.length, rule.id).toBeGreaterThan(0);
+    });
   }
 });
 

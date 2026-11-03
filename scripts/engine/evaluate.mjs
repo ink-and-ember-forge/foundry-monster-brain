@@ -13,9 +13,9 @@
  *   - a bound slot is labelled with its item, e.g. "Ranged strike (Shortbow)".
  *
  * Targets: enemy conditions narrow the eligible enemies, then the rule's `target` selector (see
- * targets.mjs; default "lowest-hp") picks one. A rule that wants a target but has none to pick
- * is held back ("no valid target", brief section 5). A rule with no selector and no enemy
- * condition shows the action only and the GM picks (brief section 7).
+ * targets.mjs) picks one; a rule with no selector uses DEFAULT_SELECTOR. EVERY suggestion names a
+ * target (a deliberate change from brief section 7, which allowed action-only suggestions): a rule
+ * with no enemy to pick is held back as "no valid target", so with no enemies there is no suggestion.
  */
 
 export const DEFAULT_REMAINING = 3;
@@ -73,10 +73,9 @@ import { pickTarget, describeSelector, DEFAULT_SELECTOR } from "./targets.mjs";
 
 export { actionLabel };
 
-/** Evaluate one rule. Returns { ok, enemies, narrowed, failed: string[] }. */
+/** Evaluate one rule. Returns { ok, enemies, failed: string[] }. */
 function checkRule(rule, ctx) {
   let enemies = ctx.enemies;
-  let narrowed = false;
   const failed = [];
   for (const cond of rule.when ?? []) {
     const def = CONDITIONS[cond.type];
@@ -86,7 +85,6 @@ function checkRule(rule, ctx) {
     }
     const want = !cond.not;
     if (def.scope === "enemy") {
-      narrowed = true;
       enemies = enemies.filter((e) => {
         const r = def.test(cond, ctx, e);
         return r !== null && r === want;
@@ -96,7 +94,7 @@ function checkRule(rule, ctx) {
       failed.push(describeCondition(cond));
     }
   }
-  return { ok: failed.length === 0, enemies, narrowed, failed };
+  return { ok: failed.length === 0, enemies, failed };
 }
 
 /**
@@ -133,14 +131,14 @@ export function evaluate(rules, ctx, { max = 2, policies = {} } = {}) {
       held.push({ id: rule.id, label: rule.label, reasons: blocked });
       return;
     }
-    const selector = rule.target?.length ? rule.target : null;
-    const wantsTarget = result.narrowed || selector !== null;
-    const target = wantsTarget ? pickTarget(result.enemies, selector ?? DEFAULT_SELECTOR) : null;
-    if (wantsTarget && !target) {
+    // Every suggestion names a target: the rule's own preferences, or the default if it has none.
+    const own = rule.target?.length > 0;
+    const target = pickTarget(result.enemies, own ? rule.target : DEFAULT_SELECTOR);
+    if (!target) {
       held.push({ id: rule.id, label: rule.label, reasons: ["no valid target"] });
       return;
     }
-    const targetWhy = wantsTarget ? describeSelector(selector ?? DEFAULT_SELECTOR) : null;
+    const targetWhy = describeSelector(own ? rule.target : DEFAULT_SELECTOR) + (own ? "" : " (default)");
     candidates.push({ rule, index, target, targetWhy, bundle });
   });
   candidates.sort(compareCandidates);
@@ -152,8 +150,8 @@ export function evaluate(rules, ctx, { max = 2, policies = {} } = {}) {
     why: (rule.when ?? []).map(describeCondition),
     source: rule.source ?? null,
     hint: rule.hint ?? null,
-    target: target?.name ?? null,
-    targetWhy: target ? targetWhy : null,
+    target: target.name,
+    targetWhy,
   }));
   return { suggestions, held, remaining };
 }

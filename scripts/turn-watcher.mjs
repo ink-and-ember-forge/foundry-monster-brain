@@ -34,6 +34,8 @@ export async function refresh(combat, combatant = combat?.combatant) {
     // Changes whenever the evaluation context changes, which resets the "Something else" choice.
     key: `${combatant.id}:${combat.round}:${actions.length}:${result.suggestions[0]?.id ?? ""}`,
     suggestions: result.suggestions,
+    // Every suggestion needs a target, so with no enemies there is nothing to suggest; say why.
+    noEnemies: ctx.enemies.length === 0,
     held: result.held,
     warnings,
     templateName,

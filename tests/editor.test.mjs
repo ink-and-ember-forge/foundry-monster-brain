@@ -227,6 +227,15 @@ describe("rule editing", () => {
     await app.render();
     expect(app.draft.rules[0].do).not.toContain("flaming-arrow");
   });
+  it("tells you a target is always named and what the default is", async () => {
+    await editableCopy();
+    expect(qa(".mb-rulecard")[0].textContent).toContain("A suggestion always names a target");
+    expect(qa(".mb-rulecard")[0].textContent).toContain("someone in your reach first, then the weakest");
+    app.draft.rules[0].target = [];
+    delete app.draft.rules[0].target;
+    await app.render();
+    expect(qa(".mb-rulecard")[0].querySelector(".mb-rulesentence").textContent).toContain("Target: in reach, then lowest HP (default)");
+  });
   it("edits target preferences including a role", async () => {
     await editableCopy();
     const rows = () => qa(".mb-rulecard")[0].querySelectorAll(".mb-target");

@@ -95,11 +95,24 @@ describe("targets", () => {
     const c = ctx({ enemies: [enemy({ name: "A", hpPercent: 90 }), enemy({ id: "b", name: "B", hpPercent: 10 })] });
     expect(evaluate(rules, c).suggestions[0].target).toBe("B");
   });
-  it("gives no target when none is wanted; a rule that wants one but has none is held back", () => {
-    expect(evaluate([{ id: "r", when: [], do: [] }], ctx()).suggestions[0].target).toBeNull();
-    const none = evaluate([{ id: "r", label: "R", when: [], target: ["lowest-hp"], do: [] }], ctx({ enemies: [] }));
+  it("every suggestion names a target: a rule with no selector gets the default, and says so", () => {
+    const s = evaluate([{ id: "r", when: [], do: [] }], ctx()).suggestions[0];
+    expect(s.target).toBe("Mira");
+    expect(s.targetWhy).toBe("in reach, then lowest HP (default)");
+  });
+  it("the default prefers an enemy in reach, then the weakest", () => {
+    const c = ctx({ enemies: [enemy({ name: "FarWeak", hpPercent: 5, inReach: false }), enemy({ id: "b", name: "NearA", hpPercent: 80, inReach: true }), enemy({ id: "c", name: "NearB", hpPercent: 40, inReach: true })] });
+    expect(evaluate([{ id: "r", when: [], do: [] }], c).suggestions[0].target).toBe("NearB");
+  });
+  it("a rule's own selector overrides the default and is not marked as default", () => {
+    const c = ctx({ enemies: [enemy({ name: "Strong", hpPercent: 90 }), enemy({ id: "b", name: "Weak", hpPercent: 10 })] });
+    const s = evaluate([{ id: "r", when: [], target: ["highest-hp"], do: [] }], c).suggestions[0];
+    expect(s).toMatchObject({ target: "Strong", targetWhy: "highest HP" });
+  });
+  it("with no enemies there is nothing to suggest: every rule is held back as 'no valid target'", () => {
+    const none = evaluate([{ id: "r", label: "R", when: [], do: [] }, { id: "s", label: "S", when: [], target: ["lowest-hp"], do: [] }], ctx({ enemies: [] }));
     expect(none.suggestions).toEqual([]);
-    expect(none.held[0].reasons).toEqual(["no valid target"]);
+    expect(none.held.map((h) => h.reasons)).toEqual([["no valid target"], ["no valid target"]]);
   });
 });
 
@@ -179,6 +192,8 @@ describe("presentation", () => {
     expect(stripText({ label: "X", target: null })).toBe("X");
     expect(stripText({ label: "X", target: "Mira" })).toBe("X → Mira");
     expect(stripText(null)).toBe("No suggestion");
+    expect(stripText(null, { noEnemies: true })).toBe("No enemies to target");
+    expect(stripText({ label: "X", target: "Mira" }, { noEnemies: true })).toBe("X \u2192 Mira");
     expect(actionsText({ actions: ["A", "B"] })).toBe("A → B");
   });
   it("only opposition alliance is a monster", () => {

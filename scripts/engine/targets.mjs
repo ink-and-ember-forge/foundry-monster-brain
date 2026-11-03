@@ -13,7 +13,8 @@
 /** Suggested role tags ([OPEN] in the brief). Tags are free-form strings; this list is only a hint for UIs. */
 export const SUGGESTED_ROLES = ["caster", "healer", "squishy", "frontliner", "ranged", "support"];
 
-export const DEFAULT_SELECTOR = ["lowest-hp"];
+/** Used by any rule that does not say who it is aimed at: someone in reach first, then the weakest. */
+export const DEFAULT_SELECTOR = ["in-reach", "lowest-hp"];
 
 const RANKERS = {
   "in-reach": (e) => (e.inReach === true ? 0 : 1),

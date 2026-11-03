@@ -113,7 +113,7 @@ await mb.setCombatantRoles(game.combat.combatants.getName("Mira"), ["caster", "s
 await mb.setCombatantRoles(game.combat.combatants.getName("Mira"), null);                  // remove the override
 ```
 
-A rule's `target` is an ordered list of preferences, applied in order: `["role:caster", "lowest-hp"]` means casters first, then lowest HP among them. Other entries: `highest-hp`, `nearest`, `farthest`, and `in-reach` (enemies the creature can hit now; use it in melee rules). An encounter override replaces the PC's default tags for that combat.
+Every suggestion names a target. A rule's `target` is an ordered list of preferences (leave it out and the default applies: someone in reach first, then the weakest; with no enemies there is no suggestion), applied in order: `["role:caster", "lowest-hp"]` means casters first, then lowest HP among them. Other entries: `highest-hp`, `nearest`, `farthest`, and `in-reach` (enemies the creature can hit now; use it in melee rules). An encounter override replaces the PC's default tags for that combat.
 
 ## Installing from a release
 

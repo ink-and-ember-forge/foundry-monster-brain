@@ -401,7 +401,7 @@ export class MonsterBrainEditor extends ApplicationV2 {
     target.append(el("legend", { text: "Target preference, in order" }));
     (rule.target ?? []).forEach((entry, j) => target.append(this.#targetRow(entry, j, edit)));
     target.append(button("+ add preference", () => edit((r) => D.addTarget(r))));
-    target.append(el("div", { cls: "mb-meta", text: "Leave empty to show the action only and pick the target yourself (unless a condition above narrows it)." }));
+    target.append(el("div", { cls: "mb-meta", text: "A suggestion always names a target. Leave this empty to use the default: someone in your reach first, then the weakest." }));
     card.append(target);
 
     // Limits

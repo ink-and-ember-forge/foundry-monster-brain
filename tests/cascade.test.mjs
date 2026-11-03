@@ -20,7 +20,7 @@ describe("resolveProfile: merge", () => {
   });
   it("a template rule outranks the shipped always-true fallback", () => {
     const res = resolveProfile({ system: SYSTEM_LAYER, template: { rules: [r("volley")] } });
-    const out = evaluate(res.rules, { round: 5, self: { name: "G", hpPercent: 100, conditions: [] }, enemies: [] });
+    const out = evaluate(res.rules, { round: 5, self: { name: "G", hpPercent: 100, conditions: [] }, enemies: [{ id: "e", name: "E", hpPercent: 50, conditions: [], roles: [] }] });
     expect(out.suggestions[0].id).toBe("volley");
     expect(ids(res).at(-1)).toBe("fallback-strikes");
   });
@@ -179,7 +179,7 @@ describe("evaluate with slots", () => {
   const ctx = (slots) => ({
     round: 1,
     self: { name: "G", hpPercent: 100, conditions: [] },
-    enemies: [],
+    enemies: [{ id: "e", name: "E", hpPercent: 50, conditions: [], roles: [] }],
     slots,
   });
   it("labels bound slots with their item", () => {

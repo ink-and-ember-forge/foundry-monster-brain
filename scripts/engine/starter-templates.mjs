@@ -9,6 +9,9 @@
  * bind, or that it needs none). Melee rules prefer `in-reach` targets so they never name someone the
  * creature cannot hit. Hints are movement suggestions only, never destinations (brief section 11).
  *
+ * Every rule names its own target. Movement rules name who the creature is moving relative to
+ * (e.g. the nearest enemy it is fleeing from), so a suggestion never has a blank target.
+ *
  * Shipped default rules a template can switch off: last-stand, punish-prone, opening-signature,
  * close-in, fallback-strikes.
  */
@@ -232,6 +235,7 @@ export const STARTER_TEMPLATES = {
         label: "Open with signature",
         when: [{ type: "round", op: "==", value: 1 }],
         do: ["signature", "signature"],
+        target: ["role:squishy", "lowest-hp"],
       },
     ],
     disable: ["punish-prone", "close-in"],
@@ -283,14 +287,16 @@ export const STARTER_TEMPLATES = {
         label: "Flee",
         when: [{ type: "self-hp-below", percent: 50 }],
         do: ["stride-away", "stride-away"],
-        hint: "Get out of reach and keep going",
+        target: ["nearest"],
+        hint: "Get away from the target and keep going",
       },
       {
         id: "coward-panic",
         label: "Panic",
         when: [{ type: "self-has-condition", slug: "frightened" }],
         do: ["stride-away", "stride-away"],
-        hint: "Run from the source of fear",
+        target: ["nearest"],
+        hint: "Run from the target, the nearest threat",
       },
       {
         id: "coward-poke",
