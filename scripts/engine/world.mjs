@@ -14,7 +14,13 @@
  * a Stride that is not needed, truncates when actions run out, and rejects the rule with a reason when
  * the plan is impossible. Every change is reported in `adjustments`, so nothing is silent.
  *
- * Unknown distance (no tokens on the canvas) cannot be checked, so those steps are assumed possible.
+ * Unknown distance (no tokens on the canvas) cannot be checked, so those steps are assumed possible,
+ * and the plan SAYS so ("distance unknown") instead of quietly looking certain.
+ *
+ * Actions already recorded this turn change the world too. A Stride the GM clicked "Did this" for,
+ * without dragging the token, still counts as moving: it shifts the distance (toward or away by one
+ * Speed). A Stride detected from a token drag does not, because the token's real position already
+ * reflects it. A recorded Stand up means the creature is no longer prone.
  *
  * Context used: ctx.self { speed, reach, conditions }, ctx.slots.bound[slot] { kind, reach, range },
  * and the target { name, distance }.
@@ -63,8 +69,23 @@ export function planBundle({ bundle, ctx, target, remaining }) {
   const cannotMove = conditions.find((c) => BLOCKS_MOVEMENT.includes(c)) ?? (speed === 0 ? "no movement speed" : null);
 
   let d = Number.isFinite(target?.distance) ? target.distance : null;
-  let prone = conditions.includes("prone");
-  let movedAway = false;
+  const taken = ctx.turn?.taken ?? [];
+  let prone = conditions.includes("prone") && !taken.some((a) => a.key === "stand");
+  let movedAway = taken.some((a) => a.slug === "stride-away");
+  // Clicked (not dragged, not merged with a drag) Strides still moved the creature.
+  if (d != null) {
+    for (const a of taken) {
+      if (a.key !== "stride" || a.source === "auto" || a.merged) continue;
+      d = a.slug === "stride-away" ? d + speed : Math.max(ADJACENT, d - speed);
+    }
+  }
+  const distanceKnown = d != null;
+  let noted = false;
+  const noteUnknown = () => {
+    if (distanceKnown || noted) return;
+    noted = true;
+    adjustments.push(`Distance to ${name} is unknown (is its token on this scene?), so reach and range were not checked`);
+  };
   const limit = remaining ?? Infinity;
   let used = 0;
 
@@ -124,6 +145,7 @@ export function planBundle({ bundle, ctx, target, remaining }) {
     if (req.type === "melee" || req.type === "ranged") {
       const reachNeeded = req.type === "melee" ? req.reach : req.range;
       const label = actionLabel(slug);
+      if (d == null && reachNeeded != null) noteUnknown();
       if (d != null && reachNeeded != null && d > reachNeeded) {
         if (movedAway) {
           adjustments.push(`Dropped ${label} and the rest: just moved away from ${name}`);

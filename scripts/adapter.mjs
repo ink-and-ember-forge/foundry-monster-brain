@@ -86,9 +86,10 @@ function enemyEntry(other, selfActor, selfToken) {
  */
 export function buildContext(combatant, combat, history) {
   const actor = combatant.actor;
-  // Tokens are only measurable if the canvas is showing this combat's scene.
-  const sameScene = !!canvas?.ready && combat.scene?.id === canvas.scene?.id;
-  const tokenOf = (c) => (sameScene ? (c.token?.object ?? null) : null);
+  // A token can be measured when it is on the scene being viewed: TokenDocument#object is null otherwise.
+  // (Deliberately NOT comparing combat.scene to the canvas: a combat with no scene set would then make every
+  // distance "unknown", and a plan that cannot see distances looks just like one that checked them.)
+  const tokenOf = (c) => (canvas?.ready ? (c.token?.object ?? null) : null);
   const enemies = combat.combatants
     .filter((c) => c.actor && !c.isDefeated && c.id !== combatant.id && actor.isEnemyOf(c.actor))
     .map((c) => ({ id: c.id, name: c.name, actor: c.actor, roles: rolesFor(c), token: tokenOf(c) }))

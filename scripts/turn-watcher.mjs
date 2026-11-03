@@ -4,7 +4,7 @@ import { buildContext } from "./adapter.mjs";
 import { evaluate } from "./engine/evaluate.mjs";
 import { isMonsterAlliance } from "./engine/suggestion.mjs";
 import { turnActions } from "./engine/history.mjs";
-import { readHistory, panelHandlers } from "./tracker.mjs";
+import { readHistory, panelHandlers, noteExpected } from "./tracker.mjs";
 import { resolveFor } from "./profiles.mjs";
 
 /** Everything the pipeline produces for a combatant right now. Also backs the console `explain` API. */
@@ -30,6 +30,7 @@ export async function refresh(combat, combatant = combat?.combatant) {
   const { history, ctx, result, warnings, templateName } = compute(combat, combatant);
   console.debug(`${MODULE_ID} | ${combatant.name} r${combat.round}`, { ctx, ...result, warnings });
   const actions = turnActions(history, combat.round, combatant.id);
+  noteExpected(combatant.id, combat.round, result.suggestions.map((s) => s.slugs[0]));
   const view = {
     // Changes whenever the evaluation context changes, which resets the "Something else" choice.
     key: `${combatant.id}:${combat.round}:${actions.length}:${result.suggestions[0]?.id ?? ""}`,

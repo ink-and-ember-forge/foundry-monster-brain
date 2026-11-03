@@ -53,8 +53,7 @@ function checkSlots(bundle, ctx) {
 }
 
 function slotLabel(slug, ctx) {
-  const item = ctx.slots?.bound?.[slug];
-  return item ? `${actionLabel(slug)} (${item.label})` : actionLabel(slug);
+  return labelWithItem(slug, ctx.slots?.bound?.[slug]);
 }
 
 /**
@@ -82,6 +81,8 @@ import { actionLabel, actionKey } from "./actions.mjs";
 import { STRIKE_SLOTS } from "./slots.mjs";
 import { rankTargets, describeSelector, DEFAULT_SELECTOR } from "./targets.mjs";
 import { planBundle } from "./world.mjs";
+import { remainingBundle } from "./taken.mjs";
+import { labelWithItem } from "./actions.mjs";
 
 export { actionLabel };
 
@@ -137,7 +138,14 @@ export function evaluate(rules, ctx, { max = 2, policies = {} } = {}) {
       held.push({ id: rule.id, label: rule.label, reasons: result.failed });
       return;
     }
-    const blocked = [...checkLimits(rule, ctx), ...checkSlots(rule.do ?? [], ctx)];
+    // What is still to do: the rule's actions minus what was already done this turn, so recording an
+    // action advances the plan instead of regenerating it.
+    const todo = remainingBundle(rule.do ?? [], ctx.turn?.taken ?? []);
+    if ((rule.do ?? []).length > 0 && todo.length === 0) {
+      held.push({ id: rule.id, label: rule.label, reasons: ["already done this turn"] });
+      return;
+    }
+    const blocked = [...checkLimits(rule, ctx), ...checkSlots(todo, ctx)];
     if (blocked.length > 0) {
       held.push({ id: rule.id, label: rule.label, reasons: blocked });
       return;
@@ -155,7 +163,7 @@ export function evaluate(rules, ctx, { max = 2, policies = {} } = {}) {
     let chosen = null;
     let whyNot = null;
     for (const enemy of ranked) {
-      const plan = planBundle({ bundle: rule.do ?? [], ctx, target: enemy, remaining });
+      const plan = planBundle({ bundle: todo, ctx, target: enemy, remaining });
       if (!plan.ok) {
         whyNot ??= [plan.reason];
         continue;
@@ -188,6 +196,7 @@ export function evaluate(rules, ctx, { max = 2, policies = {} } = {}) {
     source: rule.source ?? null,
     hint: rule.hint ?? null,
     target: target.name,
+    targetDistance: Number.isFinite(target.distance) ? target.distance : null,
     targetWhy,
   }));
   return { suggestions, held, remaining };

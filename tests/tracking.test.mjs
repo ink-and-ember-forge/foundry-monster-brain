@@ -51,7 +51,7 @@ describe("budget", () => {
 
 describe("chat classification", () => {
   it("counts attack rolls, melee or ranged by identifier", () => {
-    expect(classifyContext({ type: "attack-roll", identifier: "abc.longsword.melee" })).toEqual({ key: "melee-strike", label: "Melee strike" });
+    expect(classifyContext({ type: "attack-roll", identifier: "abc.longsword.melee" })).toMatchObject({ key: "melee-strike", label: "Melee strike" });
     expect(classifyContext({ type: "attack-roll", identifier: "abc.shortbow.ranged" }).key).toBe("ranged-strike");
   });
   it("does not count damage rolls (same action as the attack)", () => {
@@ -134,12 +134,19 @@ describe("policies", () => {
     expect(r.held[0].reasons[0]).toMatch(/Melee strike would be used 3 times this turn \(max 2\)/);
   });
   it("counts actions already taken this turn", () => {
+    // Two Strikes already done by other means, and this rule wants three: one more would be a third.
+    const c = base({ turn: { remaining: 1, taken: [{ key: "melee-strike" }, { key: "melee-strike" }] } });
+    const r = evaluate([rule({ do: ["melee-strike", "melee-strike", "melee-strike"] })], c, { policies: p });
+    expect(r.suggestions).toEqual([]);
+    expect(r.held[0].reasons[0]).toMatch(/Melee strike would be used 3 times this turn \(max 2\)/);
+  });
+  it("a rule half-done is only asked for what remains, so it is not held by the cap it would have met", () => {
     const c = base({ turn: { remaining: 2, taken: [{ key: "melee-strike" }] } });
-    expect(ids(evaluate([rule({ do: ["melee-strike", "melee-strike"] })], c, { policies: p }))).toEqual([]);
-    expect(ids(evaluate([rule({ do: ["melee-strike"] })], c, { policies: p }))).toEqual(["r"]);
+    const r = evaluate([rule({ do: ["melee-strike", "melee-strike"] })], c, { policies: p });
+    expect(r.suggestions[0].slugs).toEqual(["melee-strike"]);
   });
   it("never caps movement: closing a gap can take several Strides", () => {
-    const c = base({ turn: { remaining: 1, taken: [{ key: "stride" }, { key: "stride" }, { key: "stride" }] } });
+    const c = base({ turn: { remaining: 1, taken: [{ key: "stride", slug: "stride", source: "auto" }, { key: "stride", slug: "stride", source: "auto" }, { key: "stride", slug: "stride", source: "auto" }] } });
     expect(ids(evaluate([rule({ do: ["stride-away"] })], c, { policies: p }))).toEqual(["r"]);
     const far = [{ id: "e", name: "Mira", hpPercent: 100, conditions: [], distance: 200, inReach: false }];
     const out = evaluate([rule({ do: ["melee-strike"] })], base({ enemies: far }), { policies: p });
@@ -147,7 +154,7 @@ describe("policies", () => {
   });
   it("still caps attacks, even after movement", () => {
     const c = base({ turn: { remaining: 2, taken: [{ key: "melee-strike" }, { key: "melee-strike" }] } });
-    expect(ids(evaluate([rule({ do: ["melee-strike"] })], c, { policies: p }))).toEqual([]);
+    expect(ids(evaluate([rule({ do: ["melee-strike", "melee-strike", "melee-strike"] })], c, { policies: p }))).toEqual([]);
   });
   it("does nothing without a policy", () => {
     expect(ids(evaluate([rule({ do: ["melee-strike", "melee-strike", "melee-strike"] })], base()))).toEqual(["r"]);
@@ -162,9 +169,9 @@ describe("default rules with limits and policies", () => {
     const again = evaluate(DEFAULT_RULES, base({ self: hurt, ruleUses: [{ ruleId: "last-stand", round: 2 }] }), { policies: DEFAULT_POLICIES });
     expect(again.suggestions[0].id).not.toBe("last-stand");
   });
-  it("after two strikes, the strike fallback is held back by policy", () => {
+  it("after two strikes, the strike fallback has nothing left to do", () => {
     const c = base({ turn: { remaining: 1, taken: [{ key: "melee-strike" }, { key: "melee-strike" }] } });
     const r = evaluate(DEFAULT_RULES, c, { policies: DEFAULT_POLICIES });
-    expect(r.held.find((h) => h.id === "fallback-strikes").reasons[0]).toMatch(/policy/);
+    expect(r.held.find((h) => h.id === "fallback-strikes").reasons[0]).toBe("already done this turn");
   });
 });

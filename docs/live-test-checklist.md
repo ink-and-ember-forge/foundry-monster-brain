@@ -65,6 +65,11 @@ Everything since build step 1 has only been tested against stand-in objects, so 
 - [ ] "Did this" records only the first step; the strip then moves on to the next. Doing a Stride by *dragging the token* and then clicking "Did this" (or the other way round) logs one Stride, not two.
 - [ ] After finishing a rule's last step, a rule with a cooldown or once-per-encounter limit counts as used.
 - [ ] With an enemy 90 ft away the strip shows Strides (not a Strike that can't happen).
+- [ ] **The strip and card show the distance** next to the target ("→ Mira (55 ft)"; card: "Target: Mira · 55 ft away"). Does it match the map? If it says "? ft", tell me; that is the unknown-distance case and the plan will say "Distance … is unknown".
+- [ ] **Plans advance.** Click "Did this action" on the first step: it must NOT be suggested again; the highlight moves to the next step. Repeat until the actions run out.
+- [ ] **A clicked Stride moves on without dragging the token** (the distance in the next plan shrinks by one Speed). If you then also drag the token within a minute it is still one Stride.
+- [ ] **The reported case:** signature bound to the *ranged attack*. Roll that attack from the sheet (instead of clicking): the log should show **"Signature action (…)"**, not "Ranged strike", and the plan should move on. Also try with the plan waiting for a plain ranged Strike: then it should log as "Ranged strike".
+- [ ] After the whole plan is done, nothing is suggested until the next turn; the next round starts fresh.
 
 ## 5e. Every suggestion has a target
 - [ ] Across a few turns of different styles, no suggestion ever shows without a target (strip: "Flee → Mira"; card: "Target: Mira (...)").

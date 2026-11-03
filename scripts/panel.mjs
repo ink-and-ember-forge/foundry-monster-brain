@@ -5,6 +5,7 @@ import {
   stripParts,
   stepRows,
   adjustmentLines,
+  distanceText,
   pipsText,
   whyLines,
   heldLines,
@@ -124,7 +125,7 @@ export class MonsterBrainStrip extends ApplicationV2 {
     const parts = turn.remaining > 0 ? stripParts(shown) : null;
     if (parts) {
       row.append(document.createTextNode(" "), el("span", { cls: "mb-marker", text: "\u25B6" }), document.createTextNode(" "), el("strong", { cls: "mb-current", text: parts.current }));
-      if (parts.target) row.append(el("span", { cls: "mb-target-text", text: ` \u2192 ${parts.target}` }));
+      if (parts.target) row.append(el("span", { cls: "mb-target-text", text: ` \u2192 ${parts.target}` }), el("span", { cls: "mb-meta", text: ` (${distanceText(shown, true)})` }));
       if (parts.then) row.append(el("span", { cls: "mb-then", text: `  then ${parts.then}` }));
     } else {
       row.append(document.createTextNode(": "), el("span", { cls: "mb-text", text: this.#primaryText(shown) }));
@@ -169,7 +170,7 @@ export class MonsterBrainStrip extends ApplicationV2 {
       }
       primary.append(steps);
       for (const line of adjustmentLines(shown)) primary.append(el("div", { cls: "mb-adjust", text: line }));
-      if (shown.target) primary.append(el("div", { cls: "mb-targetline", text: `Target: ${shown.target}` }));
+      if (shown.target) primary.append(el("div", { cls: "mb-targetline", text: `Target: ${shown.target} \u00B7 ${distanceText(shown)}` }));
       if (shown.hint) primary.append(el("div", { cls: "mb-hint", text: shown.hint }));
     }
     const buttons = el("div", { cls: "mb-row" });

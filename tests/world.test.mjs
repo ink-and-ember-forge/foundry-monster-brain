@@ -196,7 +196,14 @@ describe("unknown positions", () => {
   it("cannot be checked, so steps are assumed possible", () => {
     const p = planBundle({ bundle: ["melee-strike", "ranged-strike"], ctx: ctx(), target: { name: "Mira", distance: null }, remaining: 3 });
     expect(slugs(p)).toEqual(["melee-strike", "ranged-strike"]);
-    expect(p.adjustments).toEqual([]);
+    // ...but it says so, rather than looking certain (a ranged Strike with no known range needs no distance)
+    expect(p.adjustments).toEqual(["Distance to Mira is unknown (is its token on this scene?), so reach and range were not checked"]);
+  });
+  it("says so only once, and not at all when nothing depended on distance", () => {
+    const two = planBundle({ bundle: ["melee-strike", "melee-strike"], ctx: ctx(), target: { name: "Mira", distance: null }, remaining: 3 });
+    expect(two.adjustments).toHaveLength(1);
+    const moves = planBundle({ bundle: ["stride-away"], ctx: ctx(), target: { name: "Mira", distance: null }, remaining: 3 });
+    expect(moves.adjustments).toEqual([]);
   });
   it("an authored Stride is kept when distance is unknown", () => {
     const p = planBundle({ bundle: ["stride", "melee-strike"], ctx: ctx(), target: { name: "Mira", distance: null }, remaining: 3 });

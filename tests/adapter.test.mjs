@@ -79,3 +79,77 @@ describe("itemsFor", () => {
     expect(itemsFor(actor({ actions: [strike, strike] }))).toHaveLength(1);
   });
 });
+
+// ---- building the context from a combat ------------------------------------------------------------
+
+import { buildContext } from "../scripts/adapter.mjs";
+import { emptyHistory, addAction } from "../scripts/engine/history.mjs";
+
+describe("buildContext: measuring the distance to each enemy", () => {
+  const actor = (over = {}) => ({
+    name: "Actor",
+    system: { attributes: { hp: { value: 10, max: 10 } }, movement: { speeds: { land: { value: 25 } } } },
+    conditions: { active: [] },
+    isEnemyOf: () => true,
+    getReach: () => 5,
+    getFlag: () => undefined,
+    ...over,
+  });
+  const token = (distance, calls = []) => ({
+    distanceTo: (_other, opts) => {
+      calls.push(opts);
+      return distance;
+    },
+  });
+  const rig = ({ scene = null, canvasState = { ready: true, scene: { id: "viewed" } }, selfToken = token(55), enemyToken = {} } = {}) => {
+    globalThis.canvas = canvasState;
+    const self = { id: "m1", name: "Goblin", actor: actor(), token: { object: selfToken }, getFlag: () => undefined };
+    const foe = { id: "p1", name: "Mira", actor: actor(), isDefeated: false, token: { object: enemyToken }, getFlag: () => undefined };
+    return { self, combat: { round: 1, scene, combatants: [self, foe] } };
+  };
+
+  it("measures even when the combat has no scene set (the old scene check made this 'unknown')", () => {
+    const { self, combat } = rig({ scene: null });
+    const ctx = buildContext(self, combat, emptyHistory());
+    expect(ctx.enemies[0]).toMatchObject({ name: "Mira", distance: 55, inReach: false });
+  });
+  it("measures when the combat's scene differs from the viewed one, as long as both tokens are on the canvas", () => {
+    const { self, combat } = rig({ scene: { id: "elsewhere" } });
+    expect(buildContext(self, combat, emptyHistory()).enemies[0].distance).toBe(55);
+  });
+  it("reports unknown when the canvas is not ready, or a token is not on it", () => {
+    const a = rig({ canvasState: { ready: false } });
+    expect(buildContext(a.self, a.combat, emptyHistory()).enemies[0]).toMatchObject({ distance: null, inReach: null });
+    const b = rig({ enemyToken: null });
+    expect(buildContext(b.self, b.combat, emptyHistory()).enemies[0]).toMatchObject({ distance: null, inReach: null });
+  });
+  it("reports unknown, not NaN, when PF2e cannot measure", () => {
+    const { self, combat } = rig({ selfToken: token(NaN) });
+    expect(buildContext(self, combat, emptyHistory()).enemies[0]).toMatchObject({ distance: null, inReach: null });
+  });
+  it("decides 'in reach' with PF2e's own reach-aware measure", () => {
+    const calls = [];
+    const { self, combat } = rig({ selfToken: token(5, calls) });
+    const e = buildContext(self, combat, emptyHistory()).enemies[0];
+    expect(e).toMatchObject({ distance: 5, inReach: true });
+    expect(calls).toContainEqual({ reach: 5 });
+  });
+  it("gives the planner the creature's speed and reach", () => {
+    const { self, combat } = rig();
+    expect(buildContext(self, combat, emptyHistory()).self).toMatchObject({ speed: 25, reach: 5 });
+  });
+  it("passes this turn's recorded actions through whole, so the planner can see their slug, source and merge state", () => {
+    const { self, combat } = rig();
+    let h = emptyHistory();
+    h = addAction(h, { id: "a", round: 1, combatantId: "m1", key: "stride", slug: "stride-away", source: "suggestion", merged: true, ts: 1 });
+    h = addAction(h, { id: "b", round: 2, combatantId: "m1", key: "melee-strike", source: "auto", ts: 2 }); // another round: ignored
+    const ctx = buildContext(self, combat, h);
+    expect(ctx.turn.taken).toEqual([expect.objectContaining({ key: "stride", slug: "stride-away", source: "suggestion", merged: true })]);
+    expect(ctx.turn).toMatchObject({ budget: 3, remaining: 2 });
+  });
+  it("leaves out defeated enemies and the creature itself", () => {
+    const { self, combat } = rig();
+    combat.combatants[1].isDefeated = true;
+    expect(buildContext(self, combat, emptyHistory()).enemies).toEqual([]);
+  });
+});

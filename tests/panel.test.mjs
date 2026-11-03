@@ -32,6 +32,7 @@ const suggestion = (id, label, extra = {}) => ({
   ],
   adjustments: ["Added Stride: Mira is 30 ft away (Melee strike needs 5 ft)"],
   target: "Mira",
+  targetDistance: 30,
   why: ["round == 1"],
   source: "system",
   hint: null,
@@ -53,9 +54,13 @@ const combatant = { name: "Goblin" };
 
 async function open(view, h, expanded) {
   settings.set("stripExpanded", expanded);
-  // each test gets a fresh window
   MonsterBrainStrip.hide();
   const app = await MonsterBrainStrip.show(combatant, view, h);
+  // The window is a singleton, so its expanded state would otherwise leak from one test to the next.
+  if (app.expanded !== expanded) {
+    app.expanded = expanded;
+    await app.render();
+  }
   return app;
 }
 const btn = (root, text) => [...root.querySelectorAll("button")].find((b) => b.textContent.startsWith(text));
@@ -71,6 +76,17 @@ describe("collapsed strip", () => {
     expect(root.querySelector(".mb-then").textContent).toContain("then Melee strike (Claw)");
     expect(root.textContent).toContain("Goblin ▶ Stride → Mira");
     expect(root.querySelector(".mb-pips").textContent).toBe("●●○");
+  });
+  it("shows how far the target is, so a wrong measurement is visible", async () => {
+    const app = await open(makeView(), handlers(), false);
+    expect(app.lastRender.textContent).toContain("→ Mira (30 ft)");
+  });
+  it("says so when the distance is unknown", async () => {
+    const unknown = suggestion("a", "Close in", { targetDistance: null });
+    const app = await open(makeView({ suggestions: [unknown] }), handlers(), false);
+    expect(app.lastRender.textContent).toContain("→ Mira (? ft)");
+    const card = await open(makeView({ suggestions: [unknown] }), handlers(), true);
+    expect(card.lastRender.querySelector(".mb-targetline").textContent).toBe("Target: Mira · distance unknown");
   });
   it("'Did this' records only the highlighted action", async () => {
     const h = handlers();
@@ -123,7 +139,7 @@ describe("expanded card", () => {
     expect(t).toContain("Close in");
     expect(t).toContain("▶ Stride");
     expect(t).toContain("2. Melee strike (Claw)");
-    expect(t).toContain("Target: Mira");
+    expect(t).toContain("Target: Mira · 30 ft away");
     expect(t).toContain("Alternative: Strike, strike");
     expect(t).toContain("Stride ×");
     expect(t).toContain("Held back (1)");

@@ -26,3 +26,8 @@ export function actionKey(slug) {
 
 /** Keys offered in the "add action" correction menu. */
 export const MANUAL_ACTION_KEYS = ["melee-strike", "ranged-strike", "stride", "stand", "spell", "other"];
+
+/** "Signature action (Fire Bolt)" when the slot is bound to an item, else the plain label. */
+export function labelWithItem(slug, boundEntry) {
+  return boundEntry?.label ? `${actionLabel(slug)} (${boundEntry.label})` : actionLabel(slug);
+}

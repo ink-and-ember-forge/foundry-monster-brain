@@ -3,6 +3,14 @@ import { emptyHistory, isDuplicateMovement, markMerged, addAction, turnActions, 
 
 let flag;
 let n = 0;
+let bound = {};
+let resolveShouldThrow = false;
+vi.mock("../scripts/profiles.mjs", () => ({
+  resolveFor: () => {
+    if (resolveShouldThrow) throw new Error("no profile");
+    return { binding: { bound } };
+  },
+}));
 const combatant = { id: "c1", tokenId: "t1", actor: { alliance: "opposition" } };
 const combat = {
   round: 2,
@@ -15,7 +23,7 @@ const combat = {
 globalThis.foundry = { utils: { randomID: () => `id${++n}` } };
 globalThis.game = { combat, users: { activeGM: { isSelf: true } } };
 
-const { panelHandlers, onUpdateToken } = await import("../scripts/tracker.mjs");
+const { panelHandlers, onUpdateToken, onCreateChatMessage, noteExpected } = await import("../scripts/tracker.mjs");
 
 const mine = () => turnActions(flag, 2, "c1");
 const keys = () => mine().map((a) => `${a.key}:${a.source}`);
@@ -28,6 +36,9 @@ const drag = (at) => {
 beforeEach(() => {
   flag = emptyHistory();
   n = 0;
+  bound = {};
+  resolveShouldThrow = false;
+  noteExpected(null, null, []);
   vi.useFakeTimers();
   vi.setSystemTime(1_000_000);
 });
@@ -148,6 +159,85 @@ describe("a Stride reported by both a click and a token drag", () => {
     await onUpdateToken({ id: "t1" }, { x: 1 });
     game.users.activeGM = { isSelf: true };
     await onUpdateToken({ id: "t1" }, { elevation: 5 });
+    expect(flag).toEqual(emptyHistory());
+  });
+});
+
+describe("recording the plan step, not just the kind of action", () => {
+  it("'Did this' remembers which step it was, with its item in the label", async () => {
+    const suggestion = { id: "r", slugs: ["signature", "melee-strike"], steps: [{ slug: "signature", label: "Signature action (Fire Bolt)" }, { slug: "melee-strike", label: "Melee strike (Claw)" }] };
+    await panelHandlers(combat, combatant).onTook(suggestion, "step");
+    expect(mine()[0]).toMatchObject({ key: "signature", slug: "signature", label: "Signature action (Fire Bolt)", source: "suggestion" });
+  });
+  it("a Stride away keeps its direction in the slug while sharing the Stride key", async () => {
+    await panelHandlers(combat, combatant).onTook(plan(["stride-away"]), "step");
+    expect(mine()[0]).toMatchObject({ key: "stride", slug: "stride-away" });
+  });
+  it("a manually added action records its slug too", async () => {
+    await panelHandlers(combat, combatant).onAdd("stand");
+    expect(mine()[0]).toMatchObject({ key: "stand", slug: "stand", source: "manual" });
+  });
+});
+
+describe("a detected roll is recorded as the plan step it fulfilled (the reported case)", () => {
+  const chat = (context, origin) => ({ speaker: { token: "t1" }, flags: { pf2e: { context: { token: "Scene.s.Token.t1", ...context }, origin } } });
+  // The signature IS the bow: one item bound to two slots.
+  const SIGNATURE_IS_THE_BOW = () => ({
+    "ranged-strike": { itemId: "bow", label: "Shortbow", auto: true },
+    signature: { itemId: "bow", label: "Shortbow", auto: false },
+    "melee-strike": { itemId: "claw", label: "Claw", auto: true },
+  });
+  const roll = (identifier) => chat({ type: "attack-roll", identifier });
+
+  it("when the plan is waiting for the signature, the ranged roll is the signature", async () => {
+    bound = SIGNATURE_IS_THE_BOW();
+    noteExpected("c1", 2, ["signature"]);
+    await onCreateChatMessage(roll("bow.shortbow.ranged"));
+    expect(mine()[0]).toMatchObject({ key: "signature", slug: "signature", source: "auto", label: "Signature action (Shortbow)" });
+  });
+  it("when the plan is waiting for a plain ranged Strike, it is that", async () => {
+    bound = SIGNATURE_IS_THE_BOW();
+    noteExpected("c1", 2, ["ranged-strike"]);
+    await onCreateChatMessage(roll("bow.shortbow.ranged"));
+    expect(mine()[0]).toMatchObject({ key: "ranged-strike", slug: "ranged-strike" });
+  });
+  it("with no plan on screen, the slot the GM chose explicitly wins over the auto-bound Strike", async () => {
+    bound = SIGNATURE_IS_THE_BOW();
+    await onCreateChatMessage(roll("bow.shortbow.ranged"));
+    expect(mine()[0].slug).toBe("signature");
+  });
+  it("expectations from another round or another combatant are ignored", async () => {
+    bound = SIGNATURE_IS_THE_BOW();
+    noteExpected("c1", 1, ["ranged-strike"]);
+    await onCreateChatMessage(roll("bow.shortbow.ranged"));
+    expect(mine()[0].slug).toBe("signature");
+  });
+  it("a roll for an ordinary Strike stays that Strike", async () => {
+    bound = SIGNATURE_IS_THE_BOW();
+    await onCreateChatMessage(roll("claw.claw.melee"));
+    expect(mine()[0]).toMatchObject({ key: "melee-strike", label: "Melee strike" });
+  });
+  it("an item that is not bound to anything keeps its generic kind", async () => {
+    bound = SIGNATURE_IS_THE_BOW();
+    await onCreateChatMessage(roll("dagger.dagger.melee"));
+    expect(mine()[0]).toMatchObject({ key: "melee-strike" });
+  });
+  it("a spell is matched to its slot through the card's origin", async () => {
+    bound = { signature: { itemId: "fire", label: "Fire Bolt", auto: false } };
+    await onCreateChatMessage(chat({ type: "spell-cast" }, { uuid: "Actor.a1.Item.fire" }));
+    expect(mine()[0]).toMatchObject({ slug: "signature", label: "Signature action (Fire Bolt)" });
+  });
+  it("if the bindings cannot be resolved, it still records the roll as its generic kind", async () => {
+    resolveShouldThrow = true;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await onCreateChatMessage(roll("bow.shortbow.ranged"));
+    expect(mine()[0]).toMatchObject({ key: "ranged-strike" });
+    warn.mockRestore();
+  });
+  it("damage rolls and other combatants' rolls are still ignored", async () => {
+    bound = SIGNATURE_IS_THE_BOW();
+    await onCreateChatMessage(chat({ type: "damage-roll", identifier: "bow.shortbow.ranged" }));
+    await onCreateChatMessage({ speaker: { token: "someone-else" }, flags: { pf2e: { context: { type: "attack-roll", identifier: "bow.x.ranged", token: "Scene.s.Token.zzz" } } } });
     expect(flag).toEqual(emptyHistory());
   });
 });

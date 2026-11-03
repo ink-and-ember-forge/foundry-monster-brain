@@ -6,7 +6,9 @@
  */
 import { MODULE_ID } from "./constants.mjs";
 import { classifyContext } from "./engine/detect.mjs";
-import { actionLabel, actionKey } from "./engine/actions.mjs";
+import { actionLabel, actionKey, labelWithItem } from "./engine/actions.mjs";
+import { slotForItem } from "./engine/taken.mjs";
+import { resolveFor } from "./profiles.mjs";
 import {
   emptyHistory,
   addAction,
@@ -38,15 +40,41 @@ function write(combat, mutate) {
   return queue;
 }
 
-const makeAction = (combat, combatant, { key, label }, source) => ({
+/**
+ * `slug` is the plan step this fulfils (e.g. "signature", "stride-away"). `key` is the coarser tracking key
+ * (a Stride and a Stride away share one). The slug lets the planner tell which step is done.
+ */
+const makeAction = (combat, combatant, { key, label, slug }, source) => ({
   id: foundry.utils.randomID(),
   round: combat.round,
   combatantId: combatant.id,
   key,
+  ...(slug ? { slug } : {}),
   label,
   source,
   ts: Date.now(),
 });
+
+/**
+ * What the plan on screen is waiting for (the first step of each suggestion it is showing), so a detected
+ * roll that could be two slots (a signature that IS the ranged Strike) is recorded as the one the plan
+ * wants. Set by the strip whenever it evaluates.
+ */
+let expected = { combatantId: null, round: null, slugs: [] };
+export function noteExpected(combatantId, round, slugs) {
+  expected = { combatantId, round, slugs: slugs.filter(Boolean) };
+}
+const expectedFor = (combatantId, round) => (expected.combatantId === combatantId && expected.round === round ? expected.slugs : []);
+
+/** Slot bindings for the current monster; empty if they cannot be resolved (the roll then falls back to its generic kind). */
+function boundSlots(combatant) {
+  try {
+    return resolveFor(combatant).binding.bound;
+  } catch (err) {
+    console.warn(`${MODULE_ID} | could not resolve slot bindings`, err);
+    return {};
+  }
+}
 
 export function onCreateChatMessage(message) {
   if (!isActiveGM()) return;
@@ -58,8 +86,14 @@ export function onCreateChatMessage(message) {
   const ctxToken = typeof context?.token === "string" ? context.token : "";
   const fromCurrent = (message.speaker?.token && message.speaker.token === c.tokenId) || (c.tokenId && ctxToken.endsWith(c.tokenId));
   if (!fromCurrent) return;
-  const found = classifyContext(context);
-  if (found) return write(combat, (h) => addAction(h, makeAction(combat, c, found, "auto")));
+  const found = classifyContext(context, message.flags?.pf2e?.origin);
+  if (!found) return;
+  // Which of the creature's actions was it? A signature is often one of its Strikes: if the roll was for the
+  // item bound to the slot the plan is waiting for, record THAT slot, not just "a ranged Strike".
+  const bound = boundSlots(c);
+  const slot = slotForItem(found.itemId, bound, { prefer: expectedFor(c.id, combat.round), fallbackKey: found.key });
+  const action = slot === found.key ? { ...found, slug: slot } : { key: actionKey(slot), slug: slot, label: labelWithItem(slot, bound[slot]) };
+  return write(combat, (h) => addAction(h, makeAction(combat, c, action, "auto")));
 }
 
 export function onUpdateToken(tokenDoc, changes) {
@@ -102,12 +136,13 @@ export function panelHandlers(combat, combatant) {
         const slugs = scope === "step" ? suggestion.slugs.slice(0, 1) : suggestion.slugs;
         let next = h;
         for (const slug of slugs) {
-          next = recordHuman(next, combat, combatant, { key: actionKey(slug), label: actionLabel(slug) }, "suggestion");
+          const label = suggestion.steps?.find((st) => st.slug === slug)?.label ?? actionLabel(slug);
+          next = recordHuman(next, combat, combatant, { key: actionKey(slug), slug, label }, "suggestion");
         }
         const planDone = scope === "all" || suggestion.slugs.length <= 1;
         return planDone ? recordRuleUse(next, { ruleId: suggestion.id, round: combat.round, combatantId: combatant.id }) : next;
       }),
     onRemove: (id) => write(combat, (h) => removeAction(h, id)),
-    onAdd: (key) => write(combat, (h) => recordHuman(h, combat, combatant, { key, label: actionLabel(key) }, "manual")),
+    onAdd: (key) => write(combat, (h) => recordHuman(h, combat, combatant, { key, slug: key, label: actionLabel(key) }, "manual")),
   };
 }

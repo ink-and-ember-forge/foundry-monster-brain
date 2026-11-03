@@ -74,3 +74,13 @@ export function stripParts(suggestion) {
 export function adjustmentLines(suggestion) {
   return suggestion?.adjustments ?? [];
 }
+
+/**
+ * How far the target is, as the engine measured it: so a wrong or missing measurement is visible at a
+ * glance instead of silently changing the plan. `short` is for the one-line strip.
+ */
+export function distanceText(suggestion, short = false) {
+  const d = suggestion?.targetDistance;
+  if (Number.isFinite(d)) return short ? `${d} ft` : `${d} ft away`;
+  return short ? "? ft" : "distance unknown";
+}
