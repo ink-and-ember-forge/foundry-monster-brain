@@ -5,7 +5,8 @@
  */
 import { MODULE_ID } from "./constants.mjs";
 import { MonsterBrainStrip } from "./panel.mjs";
-import { refresh } from "./turn-watcher.mjs";
+import { refresh, explain } from "./turn-watcher.mjs";
+import * as profiles from "./profiles.mjs";
 import { onCreateChatMessage, onUpdateToken } from "./tracker.mjs";
 
 Hooks.once("init", () => {
@@ -19,6 +20,9 @@ Hooks.once("init", () => {
     type: Object,
     default: null,
   });
+  profiles.registerSettings();
+  // Console API until the editor exists: game.modules.get("monster-brain").api
+  game.modules.get(MODULE_ID).api = { ...profiles, explain };
   console.log(`${MODULE_ID} | init`);
 });
 

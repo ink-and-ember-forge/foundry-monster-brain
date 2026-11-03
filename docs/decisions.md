@@ -67,6 +67,10 @@ PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)
 - **Bundle vs budget (partial answer to the adaptive-bundle [OPEN]):** the bundle is trimmed to the actions remaining; no "strike x remaining" syntax yet.
 - **Storage:** history lives in a Combat flag (`flags.monster-brain.history`), written only by the active GM (`game.users.activeGM`) so two GM clients never double-write.
 - **Movement:** any `x`/`y` update to the current monster's token counts as a Stride; updates within 4 s merge into one.
+- **Cascade layers (build step 3):** a layer is `{ rules?, disable?, policies?, slots?, slotBindings? }`; templates and creatures add `template` and so on. Same-id rules replace in place (position is priority, so a replacement keeps its slot), new ids append, `disable` switches rules off (a later layer supplying the id re-enables it), policies merge by key (`null` removes), slot bindings merge with the more specific layer winning. Templates do not extend other templates in v1.
+- **Slots:** derived from the `do` lists of enabled rules (plus any declared), excluding movement (`stride`, `stride-away`). Strike slots auto-bind to the first matching strike in `actor.system.actions`; other slots are never guessed. A GM binding (`slotBindings`: slot to item id) always wins. A rule needing a strike slot the creature cannot fill is **held back** (the creature lacks that attack); other unbound slots only **warn** and the rule stays with a generic label.
+- **Storage (V6, as built):** creature profile in a flag on the base actor (shared by all tokens); encounter overrides in a combatant flag; templates and campaign in world settings. Layers are replaced by unset-then-set, because flags merge on write.
+- **Validation (partial):** unknown condition, unbound or missing slot binding, empty `do`, `oncePerEncounter` with other limits, unknown disable target, duplicate id in a layer, missing template. Not yet: unreachable rules.
 - **Context shape:** `{ round, self: { name, hpPercent, conditions[] }, enemies: [{ id, name, hpPercent, conditions[] }] }`, built by `scripts/adapter.mjs`. Defined in `scripts/engine/conditions.mjs`.
 
 ## Build progress
@@ -75,7 +79,7 @@ PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)
 |---|---|
 | 1. Skeleton, turn hook, strip | Done, tested in Foundry |
 | 2. Condition engine | **Partial.** Done: `enemy-in-reach`, `enemy-within`, `self-hp-below`, `self-has-condition`, `enemy-has-condition`, `round`. Reach and distance conditions done (untested in a live scene). Remaining: allies-down, "ability used" (needs step 5). |
-| 3. Data model and cascade | Not started. Rules are a built-in list (`default-rules.mjs`). |
+| 3. Data model and cascade | **Done** (pure merge, slots, validation; flags/settings storage; console API). No editor yet (step 8); untested live. |
 | 4. Targets and role tags | Stub only: enemy conditions narrow targets, then lowest HP. |
 | 5. Action tracking, log, correction | **Done in strip UI** (chat cards and movement; untested live). Expanded card is step 7. |
 | 6. Policies and limits | **Done** (`oncePerEncounter`, `maxPerTurn`, `cooldownRounds`; `maxSameActionPerTurn`). Policy defaults still provisional. |

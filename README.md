@@ -16,6 +16,36 @@ npm test
 
 No build step. Link the repo into your Foundry `Data/modules/` folder as `monster-brain` and enable it in a PF2e world.
 
+## Authoring (console, until the editor exists)
+
+Rules are layered: system defaults, campaign, template, creature, encounter. A later layer replaces a rule with the same `id`, disables it with `disable`, or adds new rules. Run these in the browser console (F12) as a GM:
+
+```js
+const mb = game.modules.get("monster-brain").api;
+
+// A reusable template
+await mb.setTemplate("archer", {
+  rules: [
+    { id: "volley", label: "Volley",
+      when: [{ type: "enemy-in-reach", not: true }, { type: "enemy-within", feet: 60 }],
+      do: ["ranged-strike", "ranged-strike"], target: ["lowest-hp"] }
+  ]
+});
+
+// Give a creature that template, turn off one shipped rule, and bind its signature action
+const actor = game.actors.getName("Goblin Archer");
+await mb.setProfile(actor, {
+  template: "archer",
+  disable: ["last-stand"],
+  slotBindings: { signature: actor.items.getName("Flaming Arrow").id }
+});
+
+// On your monster's turn: what does it suggest, what was held back and why, and any warnings?
+mb.explain();
+```
+
+Slots like `melee-strike` and `ranged-strike` bind automatically to the creature's first matching attack. Other slots (e.g. `signature`) are never guessed; bind them with `slotBindings`. `mb.explain()` lists validation warnings. Edits take effect from the next evaluation (next turn, or any action taken).
+
 ## Installing from a release
 
 In Foundry: **Add-on Modules > Install Module > Manifest URL**, then paste:

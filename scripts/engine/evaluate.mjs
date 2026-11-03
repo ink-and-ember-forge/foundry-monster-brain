@@ -7,6 +7,11 @@
  * Optional context: ctx.turn = { remaining, taken: [{ key }] } and ctx.ruleUses = [{ ruleId, round }].
  * Absent, the monster is treated as having a full budget and no history.
  *
+ * Optional ctx.slots = { bound: { slot: { label } }, unbound: [slot] }. When given:
+ *   - a strike slot with nothing to bind to means the creature lacks that attack, so the rule is held back;
+ *   - other unbound slots (e.g. "signature") only warn: the rule stays, shown by its generic label;
+ *   - a bound slot is labelled with its item, e.g. "Ranged strike (Shortbow)".
+ *
  * Not yet implemented, by design: role-tag target selectors (step 4), slot binding (step 3).
  * Targeting is a stub: enemy conditions narrow the eligible targets, then lowest HP is picked.
  */
@@ -32,6 +37,19 @@ function checkLimits(rule, ctx) {
   return reasons;
 }
 
+/** Slot checks. Returns reason strings for strike slots with no item to bind to. */
+function checkSlots(bundle, ctx) {
+  const unbound = ctx.slots?.unbound ?? [];
+  return [...new Set(bundle)]
+    .filter((slug) => slug in STRIKE_SLOTS && unbound.includes(slug))
+    .map((slug) => `slot: this creature has no ${STRIKE_SLOTS[slug]} attack for "${actionLabel(slug)}"`);
+}
+
+function slotLabel(slug, ctx) {
+  const item = ctx.slots?.bound?.[slug];
+  return item ? `${actionLabel(slug)} (${item.label})` : actionLabel(slug);
+}
+
 /** Global policies. Returns reason strings. */
 function checkPolicies(bundle, ctx, policies) {
   const cap = policies?.maxSameActionPerTurn;
@@ -48,6 +66,7 @@ function checkPolicies(bundle, ctx, policies) {
 }
 import { CONDITIONS, describeCondition } from "./conditions.mjs";
 import { actionLabel, actionKey } from "./actions.mjs";
+import { STRIKE_SLOTS } from "./slots.mjs";
 
 export { actionLabel };
 
@@ -109,7 +128,7 @@ export function evaluate(rules, ctx, { max = 2, policies = {} } = {}) {
     }
     const blocked = checkLimits(rule, ctx);
     const bundle = (rule.do ?? []).slice(0, remaining);
-    blocked.push(...checkPolicies(bundle, ctx, policies));
+    blocked.push(...checkSlots(bundle, ctx), ...checkPolicies(bundle, ctx, policies));
     if (blocked.length > 0) {
       held.push({ id: rule.id, label: rule.label, reasons: blocked });
       return;
@@ -123,7 +142,7 @@ export function evaluate(rules, ctx, { max = 2, policies = {} } = {}) {
     id: rule.id,
     label: rule.label ?? rule.id,
     slugs: bundle,
-    actions: bundle.map(actionLabel),
+    actions: bundle.map((slug) => slotLabel(slug, ctx)),
     target: target?.name ?? null,
   }));
   return { suggestions, held, remaining };

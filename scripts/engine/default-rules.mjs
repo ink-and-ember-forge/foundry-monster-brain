@@ -48,3 +48,6 @@ export const DEFAULT_RULES = [
  * per turn, which discourages "Strike, Strike, Strike".
  */
 export const DEFAULT_POLICIES = { maxSameActionPerTurn: 2 };
+
+/** The shipped (lowest) cascade layer. */
+export const SYSTEM_LAYER = { rules: DEFAULT_RULES, policies: DEFAULT_POLICIES };

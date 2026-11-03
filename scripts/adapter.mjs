@@ -69,3 +69,20 @@ export function buildContext(combatant, combat, history) {
     ruleUses: ruleUsesFor(history, combatant.id),
   };
 }
+
+/**
+ * Candidate items for slot binding. Strikes come from the PF2e strike list (actor.system.actions),
+ * so only attacks the creature can actually make are auto-bound; actions and spells are offered
+ * for explicit GM bindings (e.g. "signature" to a "Flaming Arrow" action).
+ * @returns {{ id: string, label: string, kind: "melee"|"ranged"|"other" }[]}
+ */
+export function itemsFor(actor) {
+  const strikes = (actor.system.actions ?? [])
+    .filter((a) => a.type === "strike" && a.item)
+    .map((a) => ({ id: a.item.id, label: a.label ?? a.item.name, kind: a.item.isRanged ? "ranged" : "melee" }));
+  const others = actor.items
+    .filter((i) => ["action", "spell"].includes(i.type))
+    .map((i) => ({ id: i.id, label: i.name, kind: "other" }));
+  const seen = new Set();
+  return [...strikes, ...others].filter((i) => (seen.has(i.id) ? false : seen.add(i.id)));
+}
