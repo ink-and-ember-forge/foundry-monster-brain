@@ -1,5 +1,5 @@
 import { MODULE_ID } from "./constants.mjs";
-import { stripText } from "./engine/suggestion.mjs";
+import { stripText, actionsText } from "./engine/suggestion.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -62,6 +62,7 @@ export class MonsterBrainStrip extends ApplicationV2 {
   async _renderHTML() {
     const el = document.createElement("div");
     el.classList.add("mb-strip-body");
+    el.title = actionsText(this.suggestion);
     const name = document.createElement("strong");
     name.textContent = this.combatant?.name ?? "";
     const text = document.createElement("span");

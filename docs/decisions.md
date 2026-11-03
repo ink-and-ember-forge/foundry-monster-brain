@@ -54,5 +54,23 @@ No per-turn action tracking found in PF2e (`encounter/`, `actor/base.ts`). The m
 ### New: turn hooks
 PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)` (`encounter/combatant.ts`) after its own turn-start effects run. Prefer these over raw `combatTurn`. Note `onStartTurn` runs per represented actor for troops.
 
+## Decided
+
+- **Ranking:** rule order is priority; an explicit `priority` (lower first) overrides position; higher `weight` breaks ties. Implemented in `scripts/engine/evaluate.mjs`.
+- **"Ally":** PF2e actor alliance (V2). A monster is an `opposition` actor; its enemies are actors for which `isEnemyOf` is true.
+- **Context shape:** `{ round, self: { name, hpPercent, conditions[] }, enemies: [{ id, name, hpPercent, conditions[] }] }`, built by `scripts/adapter.mjs`. Defined in `scripts/engine/conditions.mjs`.
+
+## Build progress
+
+| Step | Status |
+|---|---|
+| 1. Skeleton, turn hook, strip | Done, tested in Foundry |
+| 2. Condition engine | **Partial.** Done: `self-hp-below`, `self-has-condition`, `enemy-has-condition`, `round`. Remaining: `enemy-in-reach`, `enemy-within`, allies-down, "ability used" (needs step 5). |
+| 3. Data model and cascade | Not started. Rules are a built-in list (`default-rules.mjs`). |
+| 4. Targets and role tags | Stub only: enemy conditions narrow targets, then lowest HP. |
+| 5-8 | Not started |
+
+Known gaps in the current slice: no limits or policies, so `last-stand` repeats every turn while its conditions hold; the adapter (`scripts/adapter.mjs`) is untested outside Foundry; action slots are shown as plain labels (no binding to real items).
+
 ## Open design questions
-Ranking (rule order vs weights), adaptive bundle syntax, initial role tags, built-in policy defaults, template sharing format. "Ally" is now resolved (V2). See brief section 15.
+Adaptive bundle syntax, initial role tags, built-in policy defaults, template sharing format. See brief section 15.
