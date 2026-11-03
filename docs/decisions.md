@@ -97,5 +97,9 @@ PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)
 
 Known gaps: the adapter, tracker and panel (`scripts/adapter.mjs`, `tracker.mjs`, `panel.mjs`) are untested outside Foundry; spells always cost one tracked action (3-action spells and metamagic are not modelled; correct via the log); a Strike made as a reaction on the monster's own turn is indistinguishable and counts; action slots are shown as plain labels (no binding to real items).
 
+## Live testing
+
+See `docs/live-test-checklist.md`. Nothing after build step 1 has run in a live Foundry yet.
+
 ## Open design questions
 Adaptive bundle syntax, built-in policy defaults, template sharing format. See brief section 15.
