@@ -26,6 +26,15 @@ export const DEFAULT_RULES = [
     do: ["signature", "melee-strike"],
   },
   {
+    id: "close-in",
+    label: "Close the distance",
+    when: [
+      { type: "enemy-in-reach", not: true },
+      { type: "enemy-within", feet: 60 },
+    ],
+    do: ["stride", "melee-strike"],
+  },
+  {
     id: "fallback-strikes",
     label: "Strike, strike",
     when: [],

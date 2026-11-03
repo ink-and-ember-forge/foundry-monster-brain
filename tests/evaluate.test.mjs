@@ -3,7 +3,7 @@ import { evaluate, actionLabel } from "../scripts/engine/evaluate.mjs";
 import { DEFAULT_RULES } from "../scripts/engine/default-rules.mjs";
 import { stripText, actionsText, isMonsterAlliance } from "../scripts/engine/suggestion.mjs";
 
-const enemy = (over = {}) => ({ id: "e1", name: "Mira", hpPercent: 100, conditions: [], ...over });
+const enemy = (over = {}) => ({ id: "e1", name: "Mira", hpPercent: 100, conditions: [], distance: 30, inReach: false, ...over });
 const ctx = (over = {}) => ({
   round: 2,
   self: { name: "Goblin", hpPercent: 100, conditions: [] },
@@ -53,6 +53,32 @@ describe("conditions", () => {
   });
 });
 
+describe("reach and distance", () => {
+  const inReach = (not) => [{ id: "r", when: [{ type: "enemy-in-reach", ...(not ? { not: true } : {}) }], do: [] }];
+  it("enemy-in-reach is true if any enemy is in reach", () => {
+    const c = ctx({ enemies: [enemy({ inReach: false }), enemy({ id: "b", name: "Tor", distance: 5, inReach: true })] });
+    expect(ids(evaluate(inReach(false), c))).toEqual(["r"]);
+    expect(ids(evaluate(inReach(true), c))).toEqual([]);
+  });
+  it("negated enemy-in-reach means no enemy is in reach", () => {
+    expect(ids(evaluate(inReach(true), ctx()))).toEqual(["r"]);
+  });
+  it("unknown reach counts as not in reach", () => {
+    expect(ids(evaluate(inReach(false), ctx({ enemies: [enemy({ inReach: null, distance: null })] })))).toEqual([]);
+  });
+  it("enemy-within narrows targets to those in range", () => {
+    const rules = [{ id: "r", when: [{ type: "enemy-within", feet: 60 }], do: [] }];
+    const c = ctx({ enemies: [enemy({ name: "Far", distance: 90, hpPercent: 1 }), enemy({ id: "b", name: "Near", distance: 60 })] });
+    expect(evaluate(rules, c).suggestions[0].target).toBe("Near");
+    expect(evaluate(rules, ctx({ enemies: [enemy({ distance: 61 })] })).held[0].reasons[0]).toMatch(/within 60 ft/);
+  });
+  it("enemy-within excludes unknown distances even when negated", () => {
+    const unknown = ctx({ enemies: [enemy({ distance: null, inReach: null })] });
+    expect(ids(evaluate([{ id: "r", when: [{ type: "enemy-within", feet: 60 }], do: [] }], unknown))).toEqual([]);
+    expect(ids(evaluate([{ id: "r", when: [{ type: "enemy-within", feet: 60, not: true }], do: [] }], unknown))).toEqual([]);
+  });
+});
+
 describe("targets", () => {
   it("picks the lowest-HP enemy when the rule asks for a target", () => {
     const rules = [{ id: "r", when: [], target: ["lowest-hp"], do: [] }];
@@ -91,8 +117,12 @@ describe("ranking and output", () => {
 });
 
 describe("default rules", () => {
-  it("round 1 opens with signature, fallback is the alternative", () => {
+  it("round 1 opens with signature; closing in is the alternative", () => {
     const r = evaluate(DEFAULT_RULES, ctx({ round: 1 }));
+    expect(ids(r)).toEqual(["opening-signature", "close-in"]);
+  });
+  it("fallback is the alternative when an enemy is in reach on round 1", () => {
+    const r = evaluate(DEFAULT_RULES, ctx({ round: 1, enemies: [enemy({ distance: 5, inReach: true })] }));
     expect(ids(r)).toEqual(["opening-signature", "fallback-strikes"]);
   });
   it("last stand outranks everything when badly hurt and not frightened", () => {
@@ -107,6 +137,17 @@ describe("default rules", () => {
   it("prone enemy triggers punish-prone with that target", () => {
     const r = evaluate(DEFAULT_RULES, ctx({ enemies: [enemy({ name: "Tor", conditions: ["prone"] })] }));
     expect(r.suggestions[0]).toMatchObject({ id: "punish-prone", target: "Tor" });
+  });
+});
+
+describe("close-in default rule", () => {
+  it("suggests closing in when nobody is in reach but someone is within 60 ft", () => {
+    const r = evaluate(DEFAULT_RULES, ctx({ round: 3 }));
+    expect(r.suggestions[0]).toMatchObject({ id: "close-in", target: "Mira" });
+  });
+  it("is held back when an enemy is already in reach", () => {
+    const r = evaluate(DEFAULT_RULES, ctx({ round: 3, enemies: [enemy({ distance: 5, inReach: true })] }));
+    expect(ids(r)).not.toContain("close-in");
   });
 });
 

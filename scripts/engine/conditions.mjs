@@ -4,10 +4,15 @@
  * Context shape (built by scripts/adapter.mjs):
  *   { round: number,
  *     self:    { name, hpPercent, conditions: string[] },
- *     enemies: [{ id, name, hpPercent, conditions: string[] }] }
+ *     enemies: [{ id, name, hpPercent, conditions: string[],
+ *                 distance: number|null,   // feet between tokens; null if unknown (no canvas/token)
+ *                 inReach: boolean|null }] // within my attack reach; null if unknown
+ *   }
  *
  * scope "self": a yes/no about the monster or the encounter.
  * scope "enemy": a yes/no about one candidate target; it narrows the eligible targets.
+ *   An enemy test may return null for "unknown": that enemy is excluded whether or not the
+ *   condition is negated.
  */
 
 const OPS = {
@@ -33,6 +38,18 @@ export const CONDITIONS = {
     scope: "enemy",
     test: (c, _ctx, enemy) => enemy.conditions.includes(c.slug),
     describe: (c) => `an enemy is ${c.slug}`,
+  },
+  // Global "is anyone in reach": negated, it means NO enemy is in reach (brief's `volley` rule).
+  "enemy-in-reach": {
+    scope: "self",
+    test: (_c, ctx) => ctx.enemies.some((e) => e.inReach === true),
+    describe: () => "an enemy is within my reach",
+  },
+  // Per-target: narrows eligible targets to those within the distance.
+  "enemy-within": {
+    scope: "enemy",
+    test: (c, _ctx, enemy) => (enemy.distance == null ? null : enemy.distance <= c.feet),
+    describe: (c) => `an enemy is within ${c.feet} ft`,
   },
   round: {
     scope: "self",

@@ -58,6 +58,7 @@ PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)
 
 - **Ranking:** rule order is priority; an explicit `priority` (lower first) overrides position; higher `weight` breaks ties. Implemented in `scripts/engine/evaluate.mjs`.
 - **"Ally":** PF2e actor alliance (V2). A monster is an `opposition` actor; its enemies are actors for which `isEnemyOf` is true.
+- **Reach and distance semantics:** `enemy-in-reach` is a global any-enemy check (negated: no enemy in reach), matching the brief's `volley` rule. `enemy-within` narrows eligible targets. Unknown distance (`null`: canvas not on that scene, token missing, NaN) is excluded from `enemy-within` even when negated, and counts as not-in-reach. Reach test mirrors PF2e's `canFlank`: `reach >= token.distanceTo(target, { reach })`.
 - **Context shape:** `{ round, self: { name, hpPercent, conditions[] }, enemies: [{ id, name, hpPercent, conditions[] }] }`, built by `scripts/adapter.mjs`. Defined in `scripts/engine/conditions.mjs`.
 
 ## Build progress
@@ -65,7 +66,7 @@ PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)
 | Step | Status |
 |---|---|
 | 1. Skeleton, turn hook, strip | Done, tested in Foundry |
-| 2. Condition engine | **Partial.** Done: `self-hp-below`, `self-has-condition`, `enemy-has-condition`, `round`. Remaining: `enemy-in-reach`, `enemy-within`, allies-down, "ability used" (needs step 5). |
+| 2. Condition engine | **Partial.** Done: `enemy-in-reach`, `enemy-within`, `self-hp-below`, `self-has-condition`, `enemy-has-condition`, `round`. Reach and distance conditions done (untested in a live scene). Remaining: allies-down, "ability used" (needs step 5). |
 | 3. Data model and cascade | Not started. Rules are a built-in list (`default-rules.mjs`). |
 | 4. Targets and role tags | Stub only: enemy conditions narrow targets, then lowest HP. |
 | 5-8 | Not started |

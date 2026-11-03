@@ -38,7 +38,10 @@ function checkRule(rule, ctx) {
     const want = !cond.not;
     if (def.scope === "enemy") {
       narrowed = true;
-      enemies = enemies.filter((e) => def.test(cond, ctx, e) === want);
+      enemies = enemies.filter((e) => {
+        const r = def.test(cond, ctx, e);
+        return r !== null && r === want;
+      });
       if (enemies.length === 0) failed.push(`${describeCondition(cond)} (no enemy matches)`);
     } else if (def.test(cond, ctx) !== want) {
       failed.push(describeCondition(cond));
