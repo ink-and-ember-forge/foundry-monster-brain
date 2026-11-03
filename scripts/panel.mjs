@@ -2,6 +2,9 @@ import { MODULE_ID } from "./constants.mjs";
 import {
   stripText,
   actionsText,
+  stripParts,
+  stepRows,
+  adjustmentLines,
   pipsText,
   whyLines,
   heldLines,
@@ -47,7 +50,7 @@ export class MonsterBrainStrip extends ApplicationV2 {
   /**
    * @param view { key, suggestions, held, warnings, templateName, round,
    *               turn: { budget, remaining, actions: [{ id, label, source }] } }
-   * @param handlers { onTook(suggestion), onRemove(id), onAdd(key) }
+   * @param handlers { onTook(suggestion, "step"|"all"), onRemove(id), onAdd(key) }
    */
   static async show(combatant, view, handlers) {
     const app = (this.#instance ??= new this({ position: this.#savedPosition() }));
@@ -110,17 +113,26 @@ export class MonsterBrainStrip extends ApplicationV2 {
     return this.view.turn.remaining <= 0 ? "No actions left this turn" : stripText(shown, { noEnemies: this.view.noEnemies });
   }
 
-  /** Collapsed: one line. */
+  /**
+   * Collapsed: one line. The action to do NOW is bold after a marker; what follows is muted, so the
+   * whole turn is visible with the current step standing out.
+   */
   #line(shown) {
     const { turn } = this.view;
-    const row = el("div", { cls: "mb-row", title: actionsText(shown) });
+    const row = el("div", { cls: "mb-row", title: shown ? `${shown.label}: ${actionsText(shown)}` : "" });
+    row.append(el("strong", { text: this.combatant?.name ?? "" }));
+    const parts = turn.remaining > 0 ? stripParts(shown) : null;
+    if (parts) {
+      row.append(document.createTextNode(" "), el("span", { cls: "mb-marker", text: "\u25B6" }), document.createTextNode(" "), el("strong", { cls: "mb-current", text: parts.current }));
+      if (parts.target) row.append(el("span", { cls: "mb-target-text", text: ` \u2192 ${parts.target}` }));
+      if (parts.then) row.append(el("span", { cls: "mb-then", text: `  then ${parts.then}` }));
+    } else {
+      row.append(document.createTextNode(": "), el("span", { cls: "mb-text", text: this.#primaryText(shown) }));
+    }
     row.append(
-      el("strong", { text: this.combatant?.name ?? "" }),
-      document.createTextNode(": "),
-      el("span", { cls: "mb-text", text: this.#primaryText(shown) }),
       el("span", { cls: "mb-pips", text: pipsText(turn.remaining, turn.budget), title: `${turn.remaining} of ${turn.budget} actions left` }),
-      button("Took it", () => this.handlers.onTook(shown), { disabled: !shown || turn.remaining <= 0 }),
-      button("▾", () => this.#toggleExpanded(), { title: "Expand", cls: "mb-toggle" }),
+      button("Did this", () => this.handlers.onTook(shown, "step"), { title: "Record the highlighted action as done", disabled: !shown || turn.remaining <= 0 }),
+      button("\u25BE", () => this.#toggleExpanded(), { title: "Expand", cls: "mb-toggle" }),
     );
     return row;
   }
@@ -139,19 +151,31 @@ export class MonsterBrainStrip extends ApplicationV2 {
     );
     card.append(head);
 
-    // Primary suggestion.
+    // Primary suggestion: the plan for the turn, with the action to do now highlighted.
     const primary = el("div", { cls: "mb-primary" });
     if (turn.remaining <= 0) primary.append(el("div", { cls: "mb-label", text: "No actions left this turn" }));
     else if (!shown) primary.append(el("div", { cls: "mb-label", text: stripText(null, { noEnemies: this.view.noEnemies }) }));
     else {
       primary.append(el("div", { cls: "mb-label", text: shown.label }));
-      if (shown.actions.length) primary.append(el("div", { text: actionsText(shown) }));
-      if (shown.target) primary.append(el("div", { text: `Target: ${shown.target}` }));
+      const steps = el("ol", { cls: "mb-steps" });
+      for (const row of stepRows(shown)) {
+        const li = el("li", { cls: ["mb-step", `mb-${row.state}`, row.added ? "mb-added" : ""].filter(Boolean) });
+        if (row.state === "current") li.setAttribute("aria-current", "step");
+        li.append(el("span", { cls: "mb-stepmark", text: row.state === "current" ? "\u25B6" : `${row.index}.` }), document.createTextNode(" "), el("span", { cls: "mb-steplabel", text: row.label }));
+        if (row.state === "current" && row.index !== 1) li.append(el("span", { cls: "mb-meta", text: ` (step ${row.index})` }));
+        if (row.added) li.append(el("span", { cls: "mb-meta", text: " (added)" }));
+        if (row.note) li.append(el("span", { cls: "mb-meta", text: ` \u2014 ${row.note}` }));
+        steps.append(li);
+      }
+      primary.append(steps);
+      for (const line of adjustmentLines(shown)) primary.append(el("div", { cls: "mb-adjust", text: line }));
+      if (shown.target) primary.append(el("div", { cls: "mb-targetline", text: `Target: ${shown.target}` }));
       if (shown.hint) primary.append(el("div", { cls: "mb-hint", text: shown.hint }));
     }
     const buttons = el("div", { cls: "mb-row" });
     buttons.append(
-      button("Took suggestion", () => this.handlers.onTook(shown), { disabled: !shown || turn.remaining <= 0 }),
+      button("Did this action", () => this.handlers.onTook(shown, "step"), { title: "Record the highlighted action as done", cls: "mb-primary-btn", disabled: !shown || turn.remaining <= 0 }),
+      button("Took whole plan", () => this.handlers.onTook(shown, "all"), { title: "Record every step as done", disabled: !shown || turn.remaining <= 0 || shown.slugs.length < 2 }),
       button(
         "Something else",
         () => {

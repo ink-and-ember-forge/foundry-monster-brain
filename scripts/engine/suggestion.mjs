@@ -28,7 +28,8 @@ export function whyLines(suggestion) {
   const rule = `Rule: ${suggestion.label}${suggestion.source ? ` (${suggestion.source} layer)` : ""}`;
   const conditions = suggestion.why?.length ? suggestion.why : ["no conditions (always applies)"];
   const target = suggestion.target && suggestion.targetWhy ? [`Target: ${suggestion.target} (${suggestion.targetWhy})`] : [];
-  return [rule, ...conditions.map((c) => `\u2713 ${c}`), ...target];
+  const adjusted = (suggestion.adjustments ?? []).map((a) => `Adjusted: ${a}`);
+  return [rule, ...conditions.map((c) => `\u2713 ${c}`), ...target, ...adjusted];
 }
 
 /** Held-back lines: what was not suggested and why. */
@@ -48,4 +49,28 @@ export function nextIndex(index, count) {
 /** The alternative shown under the primary: the next one along, if any. */
 export function alternativeOf(suggestions, index) {
   return suggestions.length > 1 ? suggestions[nextIndex(index, suggestions.length)] : null;
+}
+
+// ---- the plan, one step highlighted ----------------------------------------------------------------
+
+/**
+ * The plan's steps for display. The first is the action to do now ("current"); the rest follow ("next").
+ * Falls back to the plain action list for suggestions without steps.
+ */
+export function stepRows(suggestion) {
+  if (!suggestion) return [];
+  const steps = suggestion.steps?.length ? suggestion.steps : (suggestion.actions ?? []).map((label) => ({ label, note: "", added: false }));
+  return steps.map((st, i) => ({ index: i + 1, label: st.label, note: st.note ?? "", added: !!st.added, state: i === 0 ? "current" : "next" }));
+}
+
+/** Parts of the one-line strip: the action to do now, the target, and what follows. */
+export function stripParts(suggestion) {
+  const rows = stepRows(suggestion);
+  if (!rows.length) return null;
+  return { current: rows[0].label, target: suggestion.target ?? null, then: rows.slice(1).map((r) => r.label).join(", ") };
+}
+
+/** Adjustments the planner made, as lines for the card and the "why" text. */
+export function adjustmentLines(suggestion) {
+  return suggestion?.adjustments ?? [];
 }

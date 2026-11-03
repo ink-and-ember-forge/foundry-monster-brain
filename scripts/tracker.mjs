@@ -14,6 +14,8 @@ import {
   recordRuleUse,
   turnActions,
   isSameMovement,
+  isDuplicateMovement,
+  markMerged,
 } from "./engine/history.mjs";
 import { isMonsterAlliance } from "./engine/suggestion.mjs";
 
@@ -57,7 +59,7 @@ export function onCreateChatMessage(message) {
   const fromCurrent = (message.speaker?.token && message.speaker.token === c.tokenId) || (c.tokenId && ctxToken.endsWith(c.tokenId));
   if (!fromCurrent) return;
   const found = classifyContext(context);
-  if (found) write(combat, (h) => addAction(h, makeAction(combat, c, found, "auto")));
+  if (found) return write(combat, (h) => addAction(h, makeAction(combat, c, found, "auto")));
 }
 
 export function onUpdateToken(tokenDoc, changes) {
@@ -65,26 +67,47 @@ export function onUpdateToken(tokenDoc, changes) {
   const combat = game.combat;
   const c = currentMonster(combat);
   if (!c || tokenDoc.id !== c.tokenId) return;
-  write(combat, (h) => {
-    const mine = turnActions(h, combat.round, c.id);
-    if (isSameMovement(mine.at(-1), Date.now())) return h;
+  return write(combat, (h) => {
+    const last = turnActions(h, combat.round, c.id).at(-1);
+    const now = Date.now();
+    if (isSameMovement(last, now)) return h; // the same drag, reported again
+    // The GM already clicked "Did this" for this Stride: the drag is that Stride, not another.
+    if (isDuplicateMovement(last, "auto", now)) return markMerged(h, last.id);
     return addAction(h, makeAction(combat, c, { key: "stride", label: actionLabel("stride") }, "auto"));
   });
 }
 
-/** Handlers the panel calls. All writes trigger updateCombat, which re-evaluates the suggestion. */
+/**
+ * Record an action the GM did by hand (clicked, not detected). A Stride they already made by dragging
+ * the token is not logged a second time.
+ */
+function recordHuman(h, combat, combatant, found, source) {
+  const last = turnActions(h, combat.round, combatant.id).at(-1);
+  if (found.key === "stride" && isDuplicateMovement(last, source, Date.now())) return markMerged(h, last.id);
+  return addAction(h, makeAction(combat, combatant, found, source));
+}
+
+/**
+ * Handlers the panel calls. All writes trigger updateCombat, which re-evaluates the suggestion.
+ *   onTook(suggestion, "step")  the action being shown now (the plan's first step), and, when it was the
+ *                               last step, one use of the rule (so limits count completed plans, and a
+ *                               rule with maxPerTurn is not shut out of its own second step)
+ *   onTook(suggestion, "all")   the whole plan, and one use of the rule
+ */
 export function panelHandlers(combat, combatant) {
   return {
-    onTook: (suggestion) =>
+    onTook: (suggestion, scope = "all") =>
       suggestion &&
       write(combat, (h) => {
+        const slugs = scope === "step" ? suggestion.slugs.slice(0, 1) : suggestion.slugs;
         let next = h;
-        for (const slug of suggestion.slugs) {
-          next = addAction(next, makeAction(combat, combatant, { key: actionKey(slug), label: actionLabel(slug) }, "suggestion"));
+        for (const slug of slugs) {
+          next = recordHuman(next, combat, combatant, { key: actionKey(slug), label: actionLabel(slug) }, "suggestion");
         }
-        return recordRuleUse(next, { ruleId: suggestion.id, round: combat.round, combatantId: combatant.id });
+        const planDone = scope === "all" || suggestion.slugs.length <= 1;
+        return planDone ? recordRuleUse(next, { ruleId: suggestion.id, round: combat.round, combatantId: combatant.id }) : next;
       }),
     onRemove: (id) => write(combat, (h) => removeAction(h, id)),
-    onAdd: (key) => write(combat, (h) => addAction(h, makeAction(combat, combatant, { key, label: actionLabel(key) }, "manual"))),
+    onAdd: (key) => write(combat, (h) => recordHuman(h, combat, combatant, { key, label: actionLabel(key) }, "manual")),
   };
 }

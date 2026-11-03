@@ -5,6 +5,7 @@ const ACTION_LABELS = {
   "ranged-strike": "Ranged strike",
   stride: "Stride",
   "stride-away": "Stride away",
+  stand: "Stand up",
   spell: "Cast a spell",
   signature: "Signature action",
   other: "Other action",
@@ -24,4 +25,4 @@ export function actionKey(slug) {
 }
 
 /** Keys offered in the "add action" correction menu. */
-export const MANUAL_ACTION_KEYS = ["melee-strike", "ranged-strike", "stride", "spell", "other"];
+export const MANUAL_ACTION_KEYS = ["melee-strike", "ranged-strike", "stride", "stand", "spell", "other"];

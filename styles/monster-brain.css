@@ -66,3 +66,18 @@
 .monster-brain .mb-warnlist { margin: 2px 0 2px 16px; padding: 0; font-size: var(--font-size-12, 12px); color: var(--color-level-warning, #c60); }
 .monster-brain .mb-picker { flex: 1; }
 .monster-brain .mb-ruleshead { justify-content: space-between; margin-top: 8px; }
+.monster-brain .mb-marker { color: var(--color-level-success, #2a8); }
+.monster-brain .mb-current { font-weight: bold; }
+.monster-brain .mb-then { opacity: 0.65; }
+.monster-brain .mb-steps { list-style: none; margin: 2px 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.monster-brain .mb-step { padding: 2px 6px; border-radius: 3px; opacity: 0.65; }
+.monster-brain .mb-step.mb-current {
+  opacity: 1;
+  font-weight: bold;
+  background: var(--color-level-success-bg, rgba(40, 160, 120, 0.18));
+  border-left: 3px solid var(--color-level-success, #2a8);
+}
+.monster-brain .mb-step.mb-added .mb-steplabel { font-style: italic; }
+.monster-brain .mb-stepmark { display: inline-block; min-width: 1.4em; }
+.monster-brain .mb-adjust { font-size: var(--font-size-12, 12px); font-style: italic; opacity: 0.85; }
+.monster-brain .mb-target-text { font-weight: bold; }

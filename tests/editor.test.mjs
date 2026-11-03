@@ -297,7 +297,7 @@ describe("rule editing", () => {
 describe("shipped default rules", () => {
   it("can be switched off per template", async () => {
     await editableCopy();
-    const row = qa(".mb-section .mb-rule").find((r) => r.textContent.includes("Strike, strike"));
+    const row = qa(".mb-section .mb-rule").find((r) => r.textContent.includes("Attack the nearest"));
     const box = row.querySelector("input");
     expect(box.checked).toBe(true);
     box.checked = false;

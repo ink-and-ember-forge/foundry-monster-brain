@@ -16,6 +16,15 @@ npm test
 
 No build step. Link the repo into your Foundry `Data/modules/` folder as `monster-brain` and enable it in a PF2e world.
 
+## How a suggestion is worked out
+
+Each rule is a list of actions (e.g. *signature, melee Strike*). Before suggesting it, the module plays the turn out against the target, step by step, and only suggests what can actually be done:
+
+- A **melee Strike** needs the target within that weapon's reach; a **ranged** one needs it within range. What `signature` needs depends on what you bound it to (a melee attack, a ranged attack, a spell with a range…), so bind it to the right item.
+- If the target is too far away, the plan **adds the Strides it needs** and says so ("Added Stride: Mira is 30 ft away"). A Stride that isn't needed is skipped. If the gap is too big to close and still attack this turn, it closes in and stops.
+- A creature that is **grabbed, restrained or immobilized** can't Stride; a **prone** one stands up first; a **paralyzed or unconscious** one can't act. Rules that can't be done are held back with the exact reason, and a rule's next-best target is tried before giving up on it.
+- The strip shows the whole turn with the **action to do now highlighted**. **Did this** records that one action and moves on to the next; **Took whole plan** records everything.
+
 ## Applying a template (per token)
 
 Behaviour is set **per token**, so two goblins from the same actor sheet can act differently.

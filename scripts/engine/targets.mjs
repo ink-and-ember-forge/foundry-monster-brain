@@ -40,11 +40,11 @@ export function unknownSelectorEntries(selector = []) {
   return selector.filter((entry) => rankerFor(entry) === null);
 }
 
-/** Best enemy for the selector, or null when there are no enemies. */
-export function pickTarget(enemies, selector = DEFAULT_SELECTOR) {
-  if (!enemies?.length) return null;
+/** All enemies, best first for the selector (ties keep original order). */
+export function rankTargets(enemies, selector = DEFAULT_SELECTOR) {
+  if (!enemies?.length) return [];
   const rankers = selector.map(rankerFor).filter(Boolean);
-  const ranked = enemies
+  return enemies
     .map((enemy, index) => ({ enemy, index }))
     .sort((a, b) => {
       for (const rank of rankers) {
@@ -52,8 +52,13 @@ export function pickTarget(enemies, selector = DEFAULT_SELECTOR) {
         if (d) return d;
       }
       return a.index - b.index;
-    });
-  return ranked[0].enemy;
+    })
+    .map((x) => x.enemy);
+}
+
+/** Best enemy for the selector, or null when there are no enemies. */
+export function pickTarget(enemies, selector = DEFAULT_SELECTOR) {
+  return rankTargets(enemies, selector)[0] ?? null;
 }
 
 /** "prefer caster, then lowest HP" */

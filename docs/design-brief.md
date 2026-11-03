@@ -46,7 +46,7 @@ The idea is to move cognitive load from live play into prep, and to make monster
 - **Rule:** an ID, a label, a list of conditions (all must hold; any condition may be negated), a target selector, an action bundle, a weight or priority, and optional limits (max per turn, once per encounter, cooldown in rounds).
 - **Condition:** a computed yes/no question about the game state, with parameters (section 6).
 - **Target selector:** an ordered list of preferences, e.g. "casters first, then lowest HP".
-- **Action bundle:** an ordered list of actions, e.g. Stride away, then ranged strike. A bundle may adapt to remaining actions (e.g. "strike x remaining"). **[OPEN]** exact syntax for this.
+- **Action bundle:** an ordered list of actions, e.g. Stride away, then ranged strike. A bundle may adapt to remaining actions (e.g. "strike x remaining"). **[OPEN]** exact syntax for this. *(As built, bundles are also checked against the world: see `docs/decisions.md`, "Action feasibility".)*
 - **Action slot:** an abstract action reference used in templates ("primary melee strike", "ranged strike", "signature") that resolves to a real item on each creature.
 - **Policy:** a global rule about suggestions themselves, e.g. "no action suggested more than twice per turn".
 - **Template:** a named, reusable rule set (e.g. Skirmisher).

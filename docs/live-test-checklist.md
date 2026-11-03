@@ -16,7 +16,7 @@ Everything since build step 1 has only been tested against stand-in objects, so 
 
 ## 2. Conditions and targets
 - [ ] Monster 30 ft away, nobody adjacent, round 3+: "Close the distance → [a PC]".
-- [ ] Move a PC adjacent (re-run via the next turn or any tracked action): suggestion changes (expected: "Strike, strike").
+- [ ] Move a PC adjacent (re-run via the next turn or any tracked action): suggestion changes (expected: "Attack the nearest").
 - [ ] Knock a PC prone: "Punish the prone → that PC".
 - [ ] Reduce the monster below 25% HP: "Desperate last stand" (once only).
 - [ ] `mb.setActorRoles(game.actors.getName("<PC>"), ["caster"])`, then "Close the distance" targets that PC; `mb.setCombatantRoles(<combatant>, ["squishy"])` overrides it for this combat.
@@ -53,6 +53,18 @@ Everything since build step 1 has only been tested against stand-in objects, so 
 - [ ] In a combat, choose "This encounter only", untick "use the default roles", pick different roles, Save: the target changes immediately, and a new combat is unaffected.
 - [ ] "Clear" then Save at default scope removes the character's roles.
 - [ ] The "In effect now" line matches what actually happens.
+
+## 5f. Plans only contain actions that are possible, and the current step is highlighted
+- [ ] Reproduce the original problem: a Brawler (or any melee style) with `signature` bound to a *ranged* attack or spell, an enemy 60 ft away, round 1. The plan should now be the ranged signature then Strides, never a melee Strike from across the room. At 30 ft it should fire, Stride, then Strike, with "Added Stride…" shown.
+- [ ] With an enemy adjacent, no Strides are added.
+- [ ] Bind `signature` to a *melee* attack instead and repeat at range: the Stride comes first.
+- [ ] A creature with a longer reach (or a polearm bound as its melee Strike) doesn't get a Stride at 10 ft.
+- [ ] Give the monster *grabbed* or *restrained*: with an enemy out of reach it is held back with a reason ("can't move: restrained"), with an enemy in reach it still attacks; *prone*: a Stand up step appears before any movement.
+- [ ] Is the Speed right? A slow creature (10 ft) needs more Strides. (Flying creatures use their Fly speed.)
+- [ ] The strip shows `Name ▶ <action now> → Target  then <rest>`; the card lists numbered steps with the current one clearly highlighted.
+- [ ] "Did this" records only the first step; the strip then moves on to the next. Doing a Stride by *dragging the token* and then clicking "Did this" (or the other way round) logs one Stride, not two.
+- [ ] After finishing a rule's last step, a rule with a cooldown or once-per-encounter limit counts as used.
+- [ ] With an enemy 90 ft away the strip shows Strides (not a Strike that can't happen).
 
 ## 5e. Every suggestion has a target
 - [ ] Across a few turns of different styles, no suggestion ever shows without a target (strip: "Flee → Mira"; card: "Target: Mira (...)").

@@ -161,7 +161,7 @@ describe("Skirmisher", () => {
 });
 
 describe("Ambusher", () => {
-  const prey = [e("Tank", 100, { distance: 40 }), e("Mage", 80, { distance: 50, roles: ["squishy"] })];
+  const prey = [e("Tank", 100, { distance: 40 }), e("Mage", 80, { distance: 30, roles: ["squishy"] })];
   it("opens with its special move on a soft target, once", () => {
     const r = run("ambusher", { enemies: prey, round: 1 });
     expect(top(r)).toMatchObject({ id: "ambusher-opening-strike", target: "Mage", hint: "Strike from hiding if you can" });

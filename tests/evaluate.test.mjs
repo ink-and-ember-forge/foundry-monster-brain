@@ -11,6 +11,9 @@ import {
   warningLines,
   nextIndex,
   alternativeOf,
+  stepRows,
+  stripParts,
+  adjustmentLines,
 } from "../scripts/engine/suggestion.mjs";
 
 const enemy = (over = {}) => ({ id: "e1", name: "Mira", hpPercent: 100, conditions: [], distance: 30, inReach: false, ...over });
@@ -230,5 +233,43 @@ describe("card text helpers", () => {
     expect(alternativeOf(s, 2).id).toBe("a");
     expect(alternativeOf([{ id: "a" }], 0)).toBeNull();
     expect(alternativeOf([], 0)).toBeNull();
+  });
+});
+
+describe("plan display helpers", () => {
+  const sug = {
+    label: "Charge",
+    target: "Mira",
+    steps: [
+      { label: "Stride", note: "to 5 ft from Mira", added: true },
+      { label: "Melee strike (Claw)", note: "", added: false },
+      { label: "Melee strike (Claw)", note: "", added: false },
+    ],
+    adjustments: ["Added Stride: Mira is 30 ft away (Melee strike needs 5 ft)"],
+  };
+  it("marks only the first step as current", () => {
+    const rows = stepRows(sug);
+    expect(rows.map((r) => r.state)).toEqual(["current", "next", "next"]);
+    expect(rows.map((r) => r.index)).toEqual([1, 2, 3]);
+    expect(rows[0]).toMatchObject({ label: "Stride", note: "to 5 ft from Mira", added: true });
+  });
+  it("splits the strip into what to do now, the target and what follows", () => {
+    expect(stripParts(sug)).toEqual({ current: "Stride", target: "Mira", then: "Melee strike (Claw), Melee strike (Claw)" });
+    expect(stripParts({ ...sug, steps: sug.steps.slice(0, 1) })).toMatchObject({ current: "Stride", then: "" });
+  });
+  it("falls back to the plain action list when there are no steps", () => {
+    const legacy = { target: "Mira", actions: ["Stride", "Strike"] };
+    expect(stepRows(legacy).map((r) => r.label)).toEqual(["Stride", "Strike"]);
+    expect(stripParts(legacy)).toMatchObject({ current: "Stride", then: "Strike" });
+  });
+  it("copes with nothing", () => {
+    expect(stepRows(null)).toEqual([]);
+    expect(stripParts(null)).toBeNull();
+    expect(stripParts({ steps: [], actions: [] })).toBeNull();
+    expect(adjustmentLines(null)).toEqual([]);
+    expect(adjustmentLines(sug)).toEqual(sug.adjustments);
+  });
+  it("lists what the planner changed in the why text", () => {
+    expect(whyLines({ label: "Charge", source: null, why: [], adjustments: ["Added Stride: Mira is 30 ft away"] })).toContain("Adjusted: Added Stride: Mira is 30 ft away");
   });
 });

@@ -38,6 +38,30 @@ function measure(selfActor, a, b) {
   }
 }
 
+/**
+ * Movement and reach for the action planner (engine/world.mjs). Speed is the fastest movement type the
+ * creature has (a flyer's Stride is its Fly speed); undefined when unknown, so the planner assumes 25.
+ * Verified paths: actor.system.movement.speeds.<type>.value; actor.getReach({ action: "attack" }).
+ */
+export function selfStats(actor) {
+  let speed;
+  try {
+    const speeds = Object.entries(actor.system?.movement?.speeds ?? {})
+      .filter(([type, s]) => type !== "travel" && s && Number.isFinite(s.value))
+      .map(([, s]) => s.value);
+    if (speeds.length) speed = Math.max(...speeds);
+  } catch {
+    /* unknown speed */
+  }
+  let reach;
+  try {
+    reach = actor.getReach?.({ action: "attack" });
+  } catch {
+    /* unknown reach */
+  }
+  return { speed, reach };
+}
+
 /** Condition slug to badge value (1 when the condition has no badge). */
 function conditionValues(actor) {
   return Object.fromEntries(actor.conditions.active.map((c) => [c.slug, c.value ?? 1]));
@@ -73,7 +97,7 @@ export function buildContext(combatant, combat, history) {
   const taken = turnActions(history, combat.round, combatant.id);
   return {
     round: combat.round,
-    self: { name: combatant.name, hpPercent: hpPercent(actor), conditions: conditionSlugs(actor) },
+    self: { name: combatant.name, hpPercent: hpPercent(actor), conditions: conditionSlugs(actor), ...selfStats(actor) },
     enemies,
     turn: { budget, remaining: Math.max(0, budget - taken.length), taken },
     ruleUses: ruleUsesFor(history, combatant.id),
@@ -104,7 +128,7 @@ export function buildDryRunContext(actor, { token = null, round = 1 } = {}) {
   const budget = actionBudget(conditionValues(actor));
   const ctx = {
     round,
-    self: { name: actor.name, hpPercent: hpPercent(actor), conditions: conditionSlugs(actor) },
+    self: { name: actor.name, hpPercent: hpPercent(actor), conditions: conditionSlugs(actor), ...selfStats(actor) },
     enemies: others.map((other) => enemyEntry(other, actor, selfToken)),
     turn: { budget, remaining: budget, taken: [] },
     ruleUses: [],
@@ -113,18 +137,51 @@ export function buildDryRunContext(actor, { token = null, round = 1 } = {}) {
 }
 
 /**
- * Candidate items for slot binding. Strikes come from the PF2e strike list (actor.system.actions),
- * so only attacks the creature can actually make are auto-bound; actions and spells are offered
- * for explicit GM bindings (e.g. "signature" to a "Flaming Arrow" action).
- * @returns {{ id: string, label: string, kind: "melee"|"ranged"|"other" }[]}
+ * Candidate items for slot binding, with what the planner needs to know about each (world.mjs).
+ * Strikes come from the PF2e strike list (actor.system.actions), so only attacks the creature can
+ * actually make are auto-bound. Actions and spells are offered for explicit GM bindings (e.g.
+ * "signature" to "Flaming Arrow").
+ *   melee strike  { kind: "melee",  reach }   reach: actor.getReach({ action: "attack", weapon })
+ *   ranged strike { kind: "ranged", range }   range: item.range.max
+ *   spell         touch/melee spells are melee with reach; others are "other" with their range
+ *   action        { kind: "other" } (no spatial requirement is known)
+ * @returns {{ id: string, label: string, kind: "melee"|"ranged"|"other", reach?: number, range?: number }[]}
  */
+/** Read a property that may throw on odd data. */
+function safely(read, fallback) {
+  try {
+    return read();
+  } catch {
+    return fallback;
+  }
+}
+
 export function itemsFor(actor) {
   const strikes = (actor.system.actions ?? [])
     .filter((a) => a.type === "strike" && a.item)
-    .map((a) => ({ id: a.item.id, label: a.label ?? a.item.name, kind: a.item.isRanged ? "ranged" : "melee" }));
+    .map((a) => {
+      const base = { id: a.item.id, label: a.label ?? a.item.name };
+      const ranged = safely(() => a.item.isRanged, false);
+      try {
+        if (ranged) return { ...base, kind: "ranged", range: a.item.range?.max ?? undefined };
+        return { ...base, kind: "melee", reach: actor.getReach?.({ action: "attack", weapon: a.item }) };
+      } catch {
+        return { ...base, kind: ranged ? "ranged" : "melee" }; // keep the item, lose only the spatial detail
+      }
+    });
   const others = actor.items
     .filter((i) => ["action", "spell"].includes(i.type))
-    .map((i) => ({ id: i.id, label: i.name, kind: "other" }));
+    .map((i) => {
+      const base = { id: i.id, label: i.name };
+      if (i.type !== "spell") return { ...base, kind: "other" };
+      try {
+        const max = i.range?.max;
+        if (i.isMelee) return { ...base, kind: "melee", reach: max ?? undefined };
+        return { ...base, kind: "other", range: max ?? undefined };
+      } catch {
+        return { ...base, kind: "other" };
+      }
+    });
   const seen = new Set();
   return [...strikes, ...others].filter((i) => (seen.has(i.id) ? false : seen.add(i.id)));
 }

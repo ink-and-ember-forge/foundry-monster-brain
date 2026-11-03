@@ -43,7 +43,7 @@ export const DEFAULT_RULES = [
   },
   {
     id: "fallback-strikes",
-    label: "Strike, strike",
+    label: "Attack the nearest",
     when: [],
     do: ["melee-strike", "melee-strike"],
     target: ["in-reach", "nearest"],

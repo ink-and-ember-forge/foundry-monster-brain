@@ -7,11 +7,14 @@
  *
  * @param {string[]} slots
  * @param {Record<string,string>} bindings slot to item id (GM overrides)
- * @param {{ id: string, label: string, kind: "melee"|"ranged"|"other" }[]} items the creature's candidate items
+ * @param {{ id: string, label: string, kind: "melee"|"ranged"|"other", reach?: number, range?: number }[]} items the creature's candidate items
  * @returns {{ bound: Record<string, { itemId: string, label: string, auto: boolean }>, unbound: string[], missing: string[] }}
  *   `missing` lists slots whose GM binding points at an item the creature no longer has.
  */
 export const STRIKE_SLOTS = { "melee-strike": "melee", "ranged-strike": "ranged" };
+
+/** What the planner needs to know about a bound item (world.mjs): its kind, reach and range. */
+const spatial = (item) => ({ kind: item.kind, reach: item.reach, range: item.range });
 
 export function bindSlots(slots, bindings = {}, items = []) {
   const bound = {};
@@ -20,7 +23,7 @@ export function bindSlots(slots, bindings = {}, items = []) {
   for (const slot of slots) {
     if (bindings[slot]) {
       const item = items.find((i) => i.id === bindings[slot]);
-      if (item) bound[slot] = { itemId: item.id, label: item.label, auto: false };
+      if (item) bound[slot] = { itemId: item.id, label: item.label, auto: false, ...spatial(item) };
       else {
         missing.push(slot);
         unbound.push(slot);
@@ -29,7 +32,7 @@ export function bindSlots(slots, bindings = {}, items = []) {
     }
     const kind = STRIKE_SLOTS[slot];
     const item = kind && items.find((i) => i.kind === kind);
-    if (item) bound[slot] = { itemId: item.id, label: item.label, auto: true };
+    if (item) bound[slot] = { itemId: item.id, label: item.label, auto: true, ...spatial(item) };
     else unbound.push(slot);
   }
   return { bound, unbound, missing };

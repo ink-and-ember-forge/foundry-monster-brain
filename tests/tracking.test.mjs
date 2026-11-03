@@ -120,7 +120,8 @@ describe("budget in evaluation", () => {
     expect(r).toMatchObject({ suggestions: [], remaining: 0 });
   });
   it("trims the bundle to the actions remaining", () => {
-    const r = evaluate([rule({ do: ["stride", "melee-strike", "melee-strike"] })], base({ turn: { remaining: 2, taken: [] } }));
+    const far = [{ id: "e", name: "Mira", hpPercent: 100, conditions: [], distance: 30, inReach: false }];
+    const r = evaluate([rule({ do: ["stride", "melee-strike", "melee-strike"] })], base({ enemies: far, turn: { remaining: 2, taken: [] } }));
     expect(r.suggestions[0].slugs).toEqual(["stride", "melee-strike"]);
   });
 });
@@ -137,9 +138,16 @@ describe("policies", () => {
     expect(ids(evaluate([rule({ do: ["melee-strike", "melee-strike"] })], c, { policies: p }))).toEqual([]);
     expect(ids(evaluate([rule({ do: ["melee-strike"] })], c, { policies: p }))).toEqual(["r"]);
   });
-  it("treats stride-away and stride as the same action", () => {
-    const c = base({ turn: { remaining: 2, taken: [{ key: "stride" }, { key: "stride" }] } });
-    expect(ids(evaluate([rule({ do: ["stride-away"] })], c, { policies: p }))).toEqual([]);
+  it("never caps movement: closing a gap can take several Strides", () => {
+    const c = base({ turn: { remaining: 1, taken: [{ key: "stride" }, { key: "stride" }, { key: "stride" }] } });
+    expect(ids(evaluate([rule({ do: ["stride-away"] })], c, { policies: p }))).toEqual(["r"]);
+    const far = [{ id: "e", name: "Mira", hpPercent: 100, conditions: [], distance: 200, inReach: false }];
+    const out = evaluate([rule({ do: ["melee-strike"] })], base({ enemies: far }), { policies: p });
+    expect(out.suggestions[0].slugs).toEqual(["stride", "stride", "stride"]);
+  });
+  it("still caps attacks, even after movement", () => {
+    const c = base({ turn: { remaining: 2, taken: [{ key: "melee-strike" }, { key: "melee-strike" }] } });
+    expect(ids(evaluate([rule({ do: ["melee-strike"] })], c, { policies: p }))).toEqual([]);
   });
   it("does nothing without a policy", () => {
     expect(ids(evaluate([rule({ do: ["melee-strike", "melee-strike", "melee-strike"] })], base()))).toEqual(["r"]);

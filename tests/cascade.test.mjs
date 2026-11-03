@@ -114,9 +114,16 @@ describe("bindSlots", () => {
   ];
   it("auto-binds strike slots to the first matching item", () => {
     const b = bindSlots(["melee-strike", "ranged-strike"], {}, items);
-    expect(b.bound["melee-strike"]).toEqual({ itemId: "i1", label: "Dagger", auto: true });
+    expect(b.bound["melee-strike"]).toMatchObject({ itemId: "i1", label: "Dagger", auto: true, kind: "melee" });
     expect(b.bound["ranged-strike"].label).toBe("Shortbow");
     expect(b.unbound).toEqual([]);
+  });
+  it("carries the item's reach and range through for the planner", () => {
+    const rich = [{ id: "pike", label: "Pike", kind: "melee", reach: 10 }, { id: "bow", label: "Bow", kind: "ranged", range: 100 }, { id: "fire", label: "Fireball", kind: "other", range: 120 }];
+    const b = bindSlots(["melee-strike", "ranged-strike", "signature"], { signature: "fire" }, rich);
+    expect(b.bound["melee-strike"]).toMatchObject({ kind: "melee", reach: 10 });
+    expect(b.bound["ranged-strike"]).toMatchObject({ kind: "ranged", range: 100 });
+    expect(b.bound.signature).toMatchObject({ kind: "other", range: 120, auto: false });
   });
   it("never guesses other slots", () => {
     expect(bindSlots(["signature"], {}, items).unbound).toEqual(["signature"]);
