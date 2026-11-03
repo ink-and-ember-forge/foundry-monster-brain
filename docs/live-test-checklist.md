@@ -39,7 +39,7 @@ Everything since build step 1 has only been tested against stand-in objects, so 
 
 ## 5a. Configure dialog (per token)
 - [ ] Right-click an NPC token: a brain button appears on the Token HUD. (If not, `game.modules.get("monster-brain").api.configure()` with the token selected should open it; tell me the HUD layout you see.)
-- [ ] Put two tokens of the same actor on the map. Give token A the `archer` template, leave token B alone. On their turns A suggests archer rules and B does not.
+- [ ] Put two tokens of the same actor on the map. Give token A the `sniper` template, leave token B alone. On their turns A suggests sniper rules and B does not.
 - [ ] In the dialog, the preview changes as you change template, untick a rule, or bind a slot (before saving).
 - [ ] "This token only" vs "Every <actor> token": saving at actor level affects both tokens, and a token-level template still wins on A.
 - [ ] Reopen the dialog on a saved token: the saved choices are shown.
@@ -53,6 +53,13 @@ Everything since build step 1 has only been tested against stand-in objects, so 
 - [ ] In a combat, choose "This encounter only", untick "use the default roles", pick different roles, Save: the target changes immediately, and a new combat is unaffected.
 - [ ] "Clear" then Save at default scope removes the character's roles.
 - [ ] The "In effect now" line matches what actually happens.
+
+## 5d. The ten fighting styles
+Pick two or three styles that match monsters you actually run, put each on a token, and watch a few turns:
+- [ ] Does each one behave like its name says (Brawler charges, Duelist waits for an opening, Ambusher opens big then hides, Swarmer just rushes)?
+- [ ] Is the one-line description in the token dialog enough to know what you're picking?
+- [ ] Anything that feels wrong for the style (a rule too eager, a wrong target, a missing move)? Send me the style and the situation.
+- [ ] A token you configured before the rename (brute, archer, caster or skittish) still works and shows the new name.
 
 ## 5c. Template and rule editor
 - [ ] Game Settings > Configure Settings > Monster Brain > "Open editor" opens it (also: "Edit templates…" in a token's dialog, and `api.editTemplates()`).
@@ -68,9 +75,9 @@ Everything since build step 1 has only been tested against stand-in objects, so 
 - [ ] Does the 640px window feel usable? Anything you'd have to scroll for too often?
 
 ## 5. Profiles, templates, dry run
-- [ ] `mb.listTemplates()` lists brute, skirmisher, archer, caster, skittish.
-- [ ] Give an archer NPC a profile: `await mb.setProfile(actor, { template: "archer" })`; on its turn "Volley" or "Retreat and shoot" appears, with the bow named, e.g. "Ranged strike (Shortbow)".
-- [ ] A monster with no ranged attack and the archer template: archer rules are held back with "no ranged attack".
+- [ ] `mb.listTemplates()` lists the ten styles: brawler, berserker, duelist, skirmisher, ambusher, sniper, spellslinger, hexer, coward, swarmer.
+- [ ] Give a sniper NPC a profile: `await mb.setProfile(actor, { template: "sniper" })`; on its turn "Volley" or "Retreat and shoot" appears, with the bow named, e.g. "Ranged strike (Shortbow)".
+- [ ] A monster with no ranged attack and the sniper template: sniper rules are held back with "no ranged attack".
 - [ ] `await mb.setProfile(actor, { template: "caster", slotBindings: { signature: actor.items.getName("<a spell or action>").id } })`; the strip names it.
 - [ ] `mb.dryRun("<monster name>")` prints a report; with no token on the scene it says distances are unknown.
 - [ ] `mb.explain()` on a monster's turn returns held-back reasons and any warnings.

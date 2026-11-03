@@ -29,7 +29,7 @@ Behaviour is set **per token**, so two goblins from the same actor sheet can act
 
 Open it from **Game Settings > Configure Settings > Monster Brain > Open editor**, from **Edit templates…** in a token's Monster Brain dialog, or with `game.modules.get("monster-brain").api.editTemplates()`.
 
-- **Templates tab:** create, duplicate, edit and delete templates. The five starters are read-only; click **Duplicate** to make an editable copy. Each rule is a card showing a one-line sentence ("When … : … Target: …"). Open it to edit its **conditions** (all must hold; tick *not* to negate), the **actions** to do in order (including your own custom slots), **target preferences** in order, **limits** (once per encounter, max per turn, cooldown) and **hint** text. Higher rules win. You can also switch off any of the shipped default rules for the template. Warnings appear on the rule they belong to.
+- **Templates tab:** create, duplicate, edit and delete templates. The ten starters are read-only; click **Duplicate** to make an editable copy. Each rule is a card showing a one-line sentence ("When … : … Target: …"). Open it to edit its **conditions** (all must hold; tick *not* to negate), the **actions** to do in order (including your own custom slots), **target preferences** in order, **limits** (once per encounter, max per turn, cooldown) and **hint** text. Higher rules win. You can also switch off any of the shipped default rules for the template. Warnings appear on the rule they belong to.
 - **Campaign policies tab:** the repeat cap (stop suggesting the same action more than N times a turn), or turn it off.
 - Saving updates a running combat's suggestion straight away. Tokens that use a template pick up changes automatically.
 
@@ -43,7 +43,7 @@ Rules are layered: system defaults, campaign, template, creature, encounter. A l
 const mb = game.modules.get("monster-brain").api;
 
 // A reusable template
-await mb.setTemplate("archer", {
+await mb.setTemplate("my-sniper", {
   rules: [
     { id: "volley", label: "Volley",
       when: [{ type: "enemy-in-reach", not: true }, { type: "enemy-within", feet: 60 }],
@@ -54,7 +54,7 @@ await mb.setTemplate("archer", {
 // Give a creature that template, turn off one shipped rule, and bind its signature action
 const actor = game.actors.getName("Goblin Archer");
 await mb.setProfile(actor, {
-  template: "archer",
+  template: "my-sniper",
   disable: ["last-stand"],
   slotBindings: { signature: actor.items.getName("Flaming Arrow").id }
 });
@@ -67,14 +67,29 @@ Slots like `melee-strike` and `ranged-strike` bind automatically to the creature
 
 ## Starter templates and dry run
 
-Five starter templates ship with the module: **brute, skirmisher, archer, caster, skittish**. They are starting points to tweak.
+Ten starter templates ship with the module, named for **how the creature fights**. They are starting points to tweak. `signature` is a creature's one special move; where a style uses it, bind it to the right spell or action (the token dialog has a slot picker).
+
+| Style | Fights like this | Needs |
+|---|---|---|
+| **Brawler** | Toe-to-toe. Charges within 40 ft, hits the weakest in reach, power attack every other round. | melee Strike, `signature` |
+| **Berserker** | Reckless and relentless. Chases within 60 ft, goes all-in when badly hurt, never retreats. | melee Strike, `signature` |
+| **Duelist** | Patient and precise. Exploits off-guard foes, feints on a cooldown, only steps in within 25 ft. | melee Strike, `signature` |
+| **Skirmisher** | Hit and fade. Darts in on soft targets, strikes, slips away. | melee Strike |
+| **Ambusher** | Devastating opener on a soft target, then hit and vanish. | melee Strike, `signature` |
+| **Sniper** | Shoots from range, backs away when engaged, prefers casters. | ranged Strike |
+| **Spellslinger** | Stays out of melee and leads with its main spell. | `signature` (its spell) |
+| **Hexer** | Debuffs the toughest unafflicted enemy before damaging anyone. Edit the condition to match your debuff. | `signature` (its debuff) |
+| **Coward** | Runs when hurt or frightened; only pokes when cornered. | melee Strike |
+| **Swarmer** | Mindless minions: rush the nearest enemy and attack. No tactics. | melee Strike only |
+
+Earlier versions called four of these Brute, Archer, Caster and Skittish. Those old ids still work and map to Brawler, Sniper, Spellslinger and Coward.
 
 ```js
 const mb = game.modules.get("monster-brain").api;
 mb.listTemplates();                                   // what's available and where it comes from
-await mb.setTokenProfile(canvas.tokens.controlled[0], { template: "archer" });   // one token
-await mb.setProfile(game.actors.getName("Goblin Archer"), { template: "archer" });  // or every token of the actor
-await mb.installStarterTemplates(["archer"]);         // copy a starter into your world to edit it
+await mb.setTokenProfile(canvas.tokens.controlled[0], { template: "sniper" });   // one token
+await mb.setProfile(game.actors.getName("Goblin Archer"), { template: "sniper" });  // or every token of the actor
+await mb.installStarterTemplates(["sniper"]);         // copy a starter into your world to edit it
 mb.dryRun(canvas.tokens.controlled[0]);               // preview one token, no combat needed
 mb.dryRun("Goblin Archer");                           // or by actor name (uses its first token)
 mb.dryRun("Goblin Archer", { round: 3 });

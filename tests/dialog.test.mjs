@@ -33,7 +33,7 @@ vi.mock("../scripts/profiles.mjs", () => ({
     { id: "archer", name: "Archer", source: "starter" },
     { id: "brute", name: "Brute", source: "starter" },
   ],
-  templateById: (id) => ({ name: id === "brute" ? "Brute" : id }),
+  templateById: (id) => ({ name: id === "brute" ? "Brute" : id, description: id === "archer" ? "Shoots from range." : undefined }),
 }));
 vi.mock("../scripts/adapter.mjs", () => ({
   itemsFor: () => [
@@ -103,6 +103,16 @@ describe("configure dialog", () => {
     const opts = [...q(".mb-template").options].map((o) => o.text);
     expect(opts[0]).toBe("Same as the actor (Brute)");
     expect(q(".mb-template").value).toBe("__inherit__");
+  });
+  it("says in words what kind of fighter the chosen template makes", async () => {
+    store.token = { template: "archer" };
+    await open();
+    expect(q(".mb-about").textContent).toBe("Shoots from range.");
+  });
+  it("shows no description line when the template has none", async () => {
+    store.token = { template: "brute" };
+    await open();
+    expect(q(".mb-about")).toBeNull();
   });
   it("choosing a template updates the draft and re-previews", async () => {
     await open();

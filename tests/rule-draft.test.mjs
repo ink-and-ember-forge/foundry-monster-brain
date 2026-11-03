@@ -129,11 +129,11 @@ describe("rule editing", () => {
 describe("template editing", () => {
   it("creates and duplicates templates with unique ids", () => {
     expect(d.newTemplate(["new-template"])).toMatchObject({ id: "new-template-2", template: { name: "New template", rules: [] } });
-    const copy = d.duplicateTemplate(STARTER_TEMPLATES.archer, ["archer", "archer-copy"]);
-    expect(copy.id).toBe("archer-copy-2");
-    expect(copy.template.name).toBe("Archer (copy)");
+    const copy = d.duplicateTemplate(STARTER_TEMPLATES.sniper, ["sniper", "sniper-copy"]);
+    expect(copy.id).toBe("sniper-copy-2");
+    expect(copy.template.name).toBe("Sniper (copy)");
     copy.template.rules[0].label = "changed";
-    expect(STARTER_TEMPLATES.archer.rules[0].label).not.toBe("changed");
+    expect(STARTER_TEMPLATES.sniper.rules[0].label).not.toBe("changed");
   });
   it("adds, updates, moves and removes rules, keeping ids unique", () => {
     let t = { name: "T", rules: [] };
@@ -151,7 +151,7 @@ describe("template editing", () => {
     expect(d.setShippedRuleEnabled(t, "close-in", true)).not.toHaveProperty("disable");
   });
   it("validates a template on its own", () => {
-    expect(d.validateTemplate(STARTER_TEMPLATES.archer)).toEqual([]);
+    expect(d.validateTemplate(STARTER_TEMPLATES.sniper)).toEqual([]);
     const msgs = d.validateTemplate({ name: "T", rules: [{ id: "a", when: [{ type: "nope" }], do: [], target: ["bogus"] }] }).map((m) => m.message);
     expect(msgs).toEqual(expect.arrayContaining(['unknown condition "nope"', "rule has no actions", 'unknown target preference "bogus"']));
   });

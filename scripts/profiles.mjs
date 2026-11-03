@@ -12,7 +12,7 @@ import { resolveProfile } from "./engine/cascade.mjs";
 import { bindSlots } from "./engine/slots.mjs";
 import { validate } from "./engine/validate.mjs";
 import { SYSTEM_LAYER } from "./engine/default-rules.mjs";
-import { STARTER_TEMPLATES, STARTER_TEMPLATE_IDS } from "./engine/starter-templates.mjs";
+import { STARTER_TEMPLATES, STARTER_TEMPLATE_IDS, canonicalTemplateId } from "./engine/starter-templates.mjs";
 import { itemsFor } from "./adapter.mjs";
 
 const baseActor = (actor) => actor.baseActor ?? actor;
@@ -50,7 +50,11 @@ export function deleteTemplate(id) {
  * Template lookup: your own templates (world setting) win over the shipped starters of the same id,
  * so tweaking a starter is just saving a template with its id (see installStarterTemplates).
  */
-export const templateById = (id) => getTemplates()[id] ?? STARTER_TEMPLATES[id] ?? null;
+export function templateById(id) {
+  const world = getTemplates();
+  // Your own copy of an old id wins; otherwise the starter, following renames (brute -> brawler ...).
+  return world[id] ?? STARTER_TEMPLATES[id] ?? world[canonicalTemplateId(id)] ?? STARTER_TEMPLATES[canonicalTemplateId(id)] ?? null;
+}
 
 /** Every template available, with where it comes from. */
 export function listTemplates() {
@@ -67,7 +71,8 @@ export function listTemplates() {
 export async function installStarterTemplates(ids = STARTER_TEMPLATE_IDS, { overwrite = false } = {}) {
   const world = getTemplates();
   const installed = [];
-  for (const id of ids) {
+  for (const requested of ids) {
+    const id = canonicalTemplateId(requested);
     if (!STARTER_TEMPLATES[id] || (id in world && !overwrite)) continue;
     world[id] = structuredClone(STARTER_TEMPLATES[id]);
     installed.push(id);

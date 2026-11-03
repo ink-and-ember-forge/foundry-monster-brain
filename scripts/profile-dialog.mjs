@@ -32,6 +32,7 @@ import { dryRun } from "./dryrun.mjs";
 import { itemsFor } from "./adapter.mjs";
 import { refresh } from "./turn-watcher.mjs";
 import { MonsterBrainEditor } from "./template-editor.mjs";
+import { canonicalTemplateId } from "./engine/starter-templates.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -144,11 +145,17 @@ export class MonsterBrainDialog extends ApplicationV2 {
     const inherited = getProfile(this.actor)?.template;
     const inheritedName = inherited ? (templateById(inherited)?.name ?? inherited) : null;
     const select = el("select", { cls: "mb-template" });
-    for (const o of templateOptions(listTemplates(), this.scope, inheritedName)) select.append(new Option(o.label, o.value));
-    select.value = templateToValue(this.draft, this.scope);
+    const options = templateOptions(listTemplates(), this.scope, inheritedName);
+    for (const o of options) select.append(new Option(o.label, o.value));
+    // A profile saved with an old starter id (e.g. "archer") still shows its renamed template ("sniper").
+    const current = templateToValue(this.draft, this.scope);
+    select.value = options.some((o) => o.value === current) ? current : canonicalTemplateId(current);
     select.addEventListener("change", () => this.#setDraft(setTemplate(this.draft, valueToTemplate(select.value))));
     sec.append(select);
     const chosen = valueToTemplate(select.value) ?? getProfile(this.actor)?.template ?? null;
+    // Say in words what kind of fighter the chosen template makes.
+    const about = chosen ? templateById(chosen)?.description : null;
+    if (about) sec.append(el("p", { cls: "mb-meta mb-about", text: about }));
     sec.append(button("Edit templates\u2026", () => MonsterBrainEditor.open({ templateId: chosen }), { title: "Open the template and rule editor" }));
     return sec;
   }

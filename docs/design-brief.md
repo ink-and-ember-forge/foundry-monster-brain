@@ -174,7 +174,7 @@ The module must know what a monster actually did, for repeat caps, cooldowns, "a
 - **Schema-driven form editor** for templates and creature profiles. The form is a view onto the JSON model, generated from a schema of conditions, targets and action slots, so that model changes mean editing the schema, not rebuilding screens. Limit the form to the v1 vocabulary.
 - **Dry-run button:** pick a creature during prep and see what it would suggest against the current scene.
 - **Validation messages:** logic problems (unreachable rules, unbound slots, unknown condition, conflicting limits).
-- **Starter templates:** about five (Brute, Skirmisher, Archer, Caster, Skittish) for the GM to tweak.
+- **Starter templates:** about five (Brute, Skirmisher, Archer, Caster, Skittish) for the GM to tweak. *(As built: ten, named for fighting style; see `docs/decisions.md`.)*
 - Import/export is not a v1 feature, but the JSON model should stay portable.
 
 ## 13. Technical notes and things to verify

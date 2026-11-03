@@ -74,10 +74,10 @@ async function click(text) {
   btn(text).click();
   await settle();
 }
-/** Duplicate the starter archer into an editable copy and open its first rule. */
+/** Duplicate the starter sniper into an editable copy and open its first rule. */
 async function editableCopy() {
   await open();
-  setVal(q(".mb-picker"), "archer");
+  setVal(q(".mb-picker"), "sniper");
   await settle();
   await click("Duplicate");
   q(".mb-rulecard").open = true;
@@ -102,20 +102,23 @@ describe("starter templates", () => {
     expect(btn("Delete").disabled).toBe(true);
     expect(btn("Duplicate").disabled).toBe(false);
   });
-  it("lists the five starters, labelled", async () => {
+  it("lists the ten starters by fighting style, labelled", async () => {
     await open();
-    expect([...q(".mb-picker").options].map((o) => o.text)).toEqual(["Brute (starter)", "Skirmisher (starter)", "Archer (starter)", "Caster (starter)", "Skittish (starter)"]);
+    expect([...q(".mb-picker").options].map((o) => o.text)).toEqual([
+      "Brawler (starter)", "Berserker (starter)", "Duelist (starter)", "Skirmisher (starter)", "Ambusher (starter)",
+      "Sniper (starter)", "Spellslinger (starter)", "Hexer (starter)", "Coward (starter)", "Swarmer (starter)",
+    ]);
   });
 });
 
 describe("duplicating and saving", () => {
   it("Duplicate makes an editable, unsaved copy with a unique id", async () => {
     await editableCopy();
-    expect(app.selectedId).toBe("archer-copy");
-    expect(app.draft.name).toBe("Archer (copy)");
+    expect(app.selectedId).toBe("sniper-copy");
+    expect(app.draft.name).toBe("Sniper (copy)");
     expect(app.readOnly).toBe(false);
     expect(app.dirty).toBe(true);
-    expect([...q(".mb-picker").options].map((o) => o.text)).toContain("Archer (copy) (unsaved)");
+    expect([...q(".mb-picker").options].map((o) => o.text)).toContain("Sniper (copy) (unsaved)");
     expect(q(".mb-body").disabled).toBe(false);
   });
   it("Save writes the template, clears dirty, and re-evaluates a running combat", async () => {
@@ -123,12 +126,12 @@ describe("duplicating and saving", () => {
     await editableCopy();
     await click("Save");
     await vi.waitFor(() => expect(saved[0][0]).toBe("setTemplate"));
-    expect(saved[0][1]).toBe("archer-copy");
-    expect(saved[0][2].rules.map((r) => r.id)).toEqual(["archer-retreat-and-shoot", "archer-volley"]);
+    expect(saved[0][1]).toBe("sniper-copy");
+    expect(saved[0][2].rules.map((r) => r.id)).toEqual(["sniper-retreat-and-shoot", "sniper-volley"]);
     expect(app.dirty).toBe(false);
     expect(app.isNew).toBe(false);
     expect(refreshMock).toHaveBeenCalledWith(game.combat);
-    expect([...q(".mb-picker").options].map((o) => o.text)).toContain("Archer (copy)");
+    expect([...q(".mb-picker").options].map((o) => o.text)).toContain("Sniper (copy)");
   });
   it("New creates a blank template", async () => {
     await open();
@@ -152,7 +155,7 @@ describe("typing does not re-render (so Save is never lost)", () => {
   });
   it("editing a number param and a limit does not re-render, and clamps on blur", async () => {
     await editableCopy();
-    app.draft.rules[1].when[1].feet = 60; // archer-volley: enemy-within 60
+    app.draft.rules[1].when[1].feet = 60; // sniper-volley: enemy-within 60
     await app.render();
     const before = app.renders;
     const volley = qa(".mb-rulecard")[1];
@@ -256,15 +259,15 @@ describe("rule editing", () => {
   it("adds, moves and deletes rules", async () => {
     await editableCopy();
     await click("+ Add rule");
-    expect(app.draft.rules.map((r) => r.id)).toEqual(["archer-retreat-and-shoot", "archer-volley", "new-rule"]);
+    expect(app.draft.rules.map((r) => r.id)).toEqual(["sniper-retreat-and-shoot", "sniper-volley", "new-rule"]);
     const up = qa("button").filter((b) => b.textContent === "↑ Move up")[2];
     up.click();
     await app.render();
-    expect(app.draft.rules.map((r) => r.id)).toEqual(["archer-retreat-and-shoot", "new-rule", "archer-volley"]);
+    expect(app.draft.rules.map((r) => r.id)).toEqual(["sniper-retreat-and-shoot", "new-rule", "sniper-volley"]);
     const del = qa("button").filter((b) => b.textContent === "Delete rule")[1];
     del.click();
     await settle();
-    await vi.waitFor(() => expect(app.draft.rules.map((r) => r.id)).toEqual(["archer-retreat-and-shoot", "archer-volley"]));
+    await vi.waitFor(() => expect(app.draft.rules.map((r) => r.id)).toEqual(["sniper-retreat-and-shoot", "sniper-volley"]));
   });
   it("declining the confirmation keeps the rule", async () => {
     await editableCopy();
@@ -294,7 +297,7 @@ describe("shipped default rules", () => {
   });
   it("locks a shipped rule the template replaces itself", async () => {
     await open();
-    setVal(q(".mb-picker"), "caster");
+    setVal(q(".mb-picker"), "spellslinger");
     await settle();
     await click("Duplicate");
     const row = qa(".mb-section .mb-rule").find((r) => r.textContent.includes("Open with signature"));
@@ -307,13 +310,13 @@ describe("deleting, switching and closing", () => {
   it("deletes a saved template after confirming, and not when declined", async () => {
     await editableCopy();
     await click("Save");
-    await vi.waitFor(() => expect(world["archer-copy"]).toBeTruthy());
+    await vi.waitFor(() => expect(world["sniper-copy"]).toBeTruthy());
     globalThis.confirm = vi.fn(() => false);
     await click("Delete");
-    expect(world["archer-copy"]).toBeTruthy();
+    expect(world["sniper-copy"]).toBeTruthy();
     globalThis.confirm = vi.fn(() => true);
     await click("Delete");
-    await vi.waitFor(() => expect(world["archer-copy"]).toBeUndefined());
+    await vi.waitFor(() => expect(world["sniper-copy"]).toBeUndefined());
     expect(saved.some((s) => s[0] === "deleteTemplate")).toBe(true);
   });
   it("Discard drops an unsaved template without touching storage", async () => {
@@ -326,11 +329,11 @@ describe("deleting, switching and closing", () => {
   it("switching templates with unsaved changes asks first", async () => {
     await editableCopy();
     globalThis.confirm = vi.fn(() => false);
-    await app.select("brute");
-    expect(app.selectedId).toBe("archer-copy");
+    await app.select("brawler");
+    expect(app.selectedId).toBe("sniper-copy");
     globalThis.confirm = vi.fn(() => true);
-    await app.select("brute");
-    expect(app.selectedId).toBe("brute");
+    await app.select("brawler");
+    expect(app.selectedId).toBe("brawler");
     expect(app.dirty).toBe(false);
   });
   it("closing with unsaved changes asks first", async () => {
