@@ -95,9 +95,11 @@ describe("targets", () => {
     const c = ctx({ enemies: [enemy({ name: "A", hpPercent: 90 }), enemy({ id: "b", name: "B", hpPercent: 10 })] });
     expect(evaluate(rules, c).suggestions[0].target).toBe("B");
   });
-  it("gives no target when none is wanted, or no enemies exist", () => {
+  it("gives no target when none is wanted; a rule that wants one but has none is held back", () => {
     expect(evaluate([{ id: "r", when: [], do: [] }], ctx()).suggestions[0].target).toBeNull();
-    expect(evaluate([{ id: "r", when: [], target: ["lowest-hp"], do: [] }], ctx({ enemies: [] })).suggestions[0].target).toBeNull();
+    const none = evaluate([{ id: "r", label: "R", when: [], target: ["lowest-hp"], do: [] }], ctx({ enemies: [] }));
+    expect(none.suggestions).toEqual([]);
+    expect(none.held[0].reasons).toEqual(["no valid target"]);
   });
 });
 

@@ -4,7 +4,7 @@
  * Context shape (built by scripts/adapter.mjs):
  *   { round: number,
  *     self:    { name, hpPercent, conditions: string[] },
- *     enemies: [{ id, name, hpPercent, conditions: string[],
+ *     enemies: [{ id, name, hpPercent, conditions: string[], roles: string[],
  *                 distance: number|null,   // feet between tokens; null if unknown (no canvas/token)
  *                 inReach: boolean|null }] // within my attack reach; null if unknown
  *   }

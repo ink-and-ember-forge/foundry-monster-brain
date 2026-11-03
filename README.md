@@ -46,6 +46,19 @@ mb.explain();
 
 Slots like `melee-strike` and `ranged-strike` bind automatically to the creature's first matching attack. Other slots (e.g. `signature`) are never guessed; bind them with `slotBindings`. `mb.explain()` lists validation warnings. Edits take effect from the next evaluation (next turn, or any action taken).
 
+## Role tags and targets
+
+Tag your PCs so rules can prefer them (tags are free-form; suggested: caster, healer, squishy, frontliner, ranged, support):
+
+```js
+const mb = game.modules.get("monster-brain").api;
+await mb.setActorRoles(game.actors.getName("Mira"), ["caster"]);   // campaign default
+await mb.setCombatantRoles(game.combat.combatants.getName("Mira"), ["caster", "squishy"]); // this encounter only
+await mb.setCombatantRoles(game.combat.combatants.getName("Mira"), null);                  // remove the override
+```
+
+A rule's `target` is an ordered list of preferences, applied in order: `["role:caster", "lowest-hp"]` means casters first, then lowest HP among them. Other entries: `highest-hp`, `nearest`, `farthest`. An encounter override replaces the PC's default tags for that combat.
+
 ## Installing from a release
 
 In Foundry: **Add-on Modules > Install Module > Manifest URL**, then paste:

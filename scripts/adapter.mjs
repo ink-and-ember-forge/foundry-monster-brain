@@ -1,5 +1,6 @@
 import { actionBudget } from "./engine/budget.mjs";
 import { turnActions, ruleUsesFor } from "./engine/history.mjs";
+import { rolesFor } from "./roles.mjs";
 
 /**
  * Foundry/PF2e to plain-context adapter. The only place the rules pipeline touches game data.
@@ -57,6 +58,7 @@ export function buildContext(combatant, combat, history) {
       name: c.name,
       hpPercent: hpPercent(c.actor),
       conditions: conditionSlugs(c.actor),
+      roles: rolesFor(c),
       ...measure(combat, combatant, c),
     }));
   const budget = actionBudget(conditionValues(actor));

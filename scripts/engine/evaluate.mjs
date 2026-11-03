@@ -12,8 +12,10 @@
  *   - other unbound slots (e.g. "signature") only warn: the rule stays, shown by its generic label;
  *   - a bound slot is labelled with its item, e.g. "Ranged strike (Shortbow)".
  *
- * Not yet implemented, by design: role-tag target selectors (step 4), slot binding (step 3).
- * Targeting is a stub: enemy conditions narrow the eligible targets, then lowest HP is picked.
+ * Targets: enemy conditions narrow the eligible enemies, then the rule's `target` selector (see
+ * targets.mjs; default "lowest-hp") picks one. A rule that wants a target but has none to pick
+ * is held back ("no valid target", brief section 5). A rule with no selector and no enemy
+ * condition shows the action only and the GM picks (brief section 7).
  */
 
 export const DEFAULT_REMAINING = 3;
@@ -67,12 +69,9 @@ function checkPolicies(bundle, ctx, policies) {
 import { CONDITIONS, describeCondition } from "./conditions.mjs";
 import { actionLabel, actionKey } from "./actions.mjs";
 import { STRIKE_SLOTS } from "./slots.mjs";
+import { pickTarget, describeSelector, DEFAULT_SELECTOR } from "./targets.mjs";
 
 export { actionLabel };
-
-function lowestHp(enemies) {
-  return enemies.reduce((best, e) => (best === null || e.hpPercent < best.hpPercent ? e : best), null);
-}
 
 /** Evaluate one rule. Returns { ok, enemies, narrowed, failed: string[] }. */
 function checkRule(rule, ctx) {
@@ -134,12 +133,18 @@ export function evaluate(rules, ctx, { max = 2, policies = {} } = {}) {
       held.push({ id: rule.id, label: rule.label, reasons: blocked });
       return;
     }
-    const wantsTarget = result.narrowed || (rule.target?.length ?? 0) > 0;
-    const target = wantsTarget ? lowestHp(result.enemies) : null;
-    candidates.push({ rule, index, target, bundle });
+    const selector = rule.target?.length ? rule.target : null;
+    const wantsTarget = result.narrowed || selector !== null;
+    const target = wantsTarget ? pickTarget(result.enemies, selector ?? DEFAULT_SELECTOR) : null;
+    if (wantsTarget && !target) {
+      held.push({ id: rule.id, label: rule.label, reasons: ["no valid target"] });
+      return;
+    }
+    const targetWhy = wantsTarget ? describeSelector(selector ?? DEFAULT_SELECTOR) : null;
+    candidates.push({ rule, index, target, targetWhy, bundle });
   });
   candidates.sort(compareCandidates);
-  const suggestions = candidates.slice(0, max).map(({ rule, target, bundle }) => ({
+  const suggestions = candidates.slice(0, max).map(({ rule, target, targetWhy, bundle }) => ({
     id: rule.id,
     label: rule.label ?? rule.id,
     slugs: bundle,
@@ -148,6 +153,7 @@ export function evaluate(rules, ctx, { max = 2, policies = {} } = {}) {
     source: rule.source ?? null,
     hint: rule.hint ?? null,
     target: target?.name ?? null,
+    targetWhy: target ? targetWhy : null,
   }));
   return { suggestions, held, remaining };
 }

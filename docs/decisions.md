@@ -72,6 +72,9 @@ PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)
 - **Storage (V6, as built):** creature profile in a flag on the base actor (shared by all tokens); encounter overrides in a combatant flag; templates and campaign in world settings. Layers are replaced by unset-then-set, because flags merge on write.
 - **Validation (partial):** unknown condition, unbound or missing slot binding, empty `do`, `oncePerEncounter` with other limits, unknown disable target, duplicate id in a layer, missing template. Not yet: unreachable rules.
 - **Expanded card (build step 7):** the strip collapses to one line (name, suggestion, pips, Took it, expand). Expanded shows template and round, the primary suggestion with actions/target/hint, one alternative, "Took suggestion" and "Something else", this turn's log with add/remove, and collapsible "Why this one", "Held back (n)" and "Warnings (n)". The engine returns up to three suggestions; "Something else" cycles through them and resets whenever the evaluation context changes. Expanded state and open sections are remembered (client setting / in memory). `hint` is an optional string on a rule.
+- **Target selection (build step 4):** a selector is an ordered preference list applied lexicographically (`engine/targets.mjs`): `role:<tag>` (holders first), `lowest-hp`, `highest-hp`, `nearest`, `farthest`; ties keep original order; unknown entries are ignored and warned about. So `["role:caster","lowest-hp"]` is casters first then lowest HP, while `["lowest-hp","role:caster"]` lets the tag only break ties. If no enemy has a preferred tag, selection falls through to the next preference. Enemy conditions narrow candidates first, then the selector picks. Default selector when a rule narrows without one: `lowest-hp`.
+- **No valid target vs cannot choose (reconciling brief sections 5 and 7):** a rule that wants a target (has a selector or an enemy condition) but has no enemy to pick is held back as "no valid target". A rule with neither shows the action only and the GM picks.
+- **Role tags (resolves the initial-list [OPEN]):** free-form lowercase strings; suggested list: caster, healer, squishy, frontliner, ranged, support. Campaign default is a flag on the PC's base actor; the encounter override is a flag on the combatant and **replaces** the default for that combat (an empty list clears it). `null` removes the override.
 - **Context shape:** `{ round, self: { name, hpPercent, conditions[] }, enemies: [{ id, name, hpPercent, conditions[] }] }`, built by `scripts/adapter.mjs`. Defined in `scripts/engine/conditions.mjs`.
 
 ## Build progress
@@ -81,7 +84,7 @@ PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)
 | 1. Skeleton, turn hook, strip | Done, tested in Foundry |
 | 2. Condition engine | **Partial.** Done: `enemy-in-reach`, `enemy-within`, `self-hp-below`, `self-has-condition`, `enemy-has-condition`, `round`. Reach and distance conditions done (untested in a live scene). Remaining: allies-down, "ability used" (needs step 5). |
 | 3. Data model and cascade | **Done** (pure merge, slots, validation; flags/settings storage; console API). No editor yet (step 8); untested live. |
-| 4. Targets and role tags | Stub only: enemy conditions narrow targets, then lowest HP. |
+| 4. Targets and role tags | **Done** (pure selector, role flags and console API; the shipped `close-in` rule prefers casters). Untested live; no UI for tagging yet. |
 | 5. Action tracking, log, correction | **Done in strip UI** (chat cards and movement; untested live). Expanded card is step 7. |
 | 6. Policies and limits | **Done** (`oncePerEncounter`, `maxPerTurn`, `cooldownRounds`; `maxSameActionPerTurn`). Policy defaults still provisional. |
 | 7. Expanded card, why / held back | **Done** (DOM smoke-tested with jsdom; not yet seen in Foundry). |
@@ -90,4 +93,4 @@ PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)
 Known gaps: the adapter, tracker and panel (`scripts/adapter.mjs`, `tracker.mjs`, `panel.mjs`) are untested outside Foundry; spells always cost one tracked action (3-action spells and metamagic are not modelled; correct via the log); a Strike made as a reaction on the monster's own turn is indistinguishable and counts; action slots are shown as plain labels (no binding to real items).
 
 ## Open design questions
-Adaptive bundle syntax, initial role tags, built-in policy defaults, template sharing format. See brief section 15.
+Adaptive bundle syntax, built-in policy defaults, template sharing format. See brief section 15.

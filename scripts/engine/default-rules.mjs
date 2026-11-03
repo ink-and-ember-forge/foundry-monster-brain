@@ -34,6 +34,7 @@ export const DEFAULT_RULES = [
       { type: "enemy-within", feet: 60 },
     ],
     do: ["stride", "melee-strike"],
+    target: ["role:caster", "lowest-hp"],
   },
   {
     id: "fallback-strikes",

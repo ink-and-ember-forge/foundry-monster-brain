@@ -5,6 +5,7 @@
  * @returns {{ level: "warn", ruleId: string|null, message: string }[]}
  */
 import { CONDITIONS } from "./conditions.mjs";
+import { unknownSelectorEntries } from "./targets.mjs";
 
 export function validate(resolved, binding) {
   const out = [];
@@ -23,6 +24,7 @@ export function validate(resolved, binding) {
       if (!CONDITIONS[cond.type]) warn(rule.id, `unknown condition "${cond.type}"`);
     }
     if ((rule.do ?? []).length === 0) warn(rule.id, "rule has no actions");
+    for (const entry of unknownSelectorEntries(rule.target ?? [])) warn(rule.id, `unknown target preference "${entry}"`);
     const l = rule.limits;
     if (l?.oncePerEncounter && (l.cooldownRounds != null || l.maxPerTurn != null)) {
       warn(rule.id, "oncePerEncounter makes cooldownRounds and maxPerTurn redundant");

@@ -27,7 +27,8 @@ export function whyLines(suggestion) {
   if (!suggestion) return [];
   const rule = `Rule: ${suggestion.label}${suggestion.source ? ` (${suggestion.source} layer)` : ""}`;
   const conditions = suggestion.why?.length ? suggestion.why : ["no conditions (always applies)"];
-  return [rule, ...conditions.map((c) => `\u2713 ${c}`)];
+  const target = suggestion.target && suggestion.targetWhy ? [`Target: ${suggestion.target} (${suggestion.targetWhy})`] : [];
+  return [rule, ...conditions.map((c) => `\u2713 ${c}`), ...target];
 }
 
 /** Held-back lines: what was not suggested and why. */
