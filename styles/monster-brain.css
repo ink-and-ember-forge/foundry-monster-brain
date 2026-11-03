@@ -49,3 +49,4 @@
 .monster-brain .mb-preview { white-space: pre-wrap; font-size: var(--font-size-12, 12px); max-height: 14em; overflow-y: auto; margin: 0; }
 .monster-brain .mb-footer { justify-content: flex-end; }
 .monster-brain .mb-hud { cursor: pointer; }
+.monster-brain .mb-custom { flex: 1; }

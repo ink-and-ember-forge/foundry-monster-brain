@@ -46,6 +46,14 @@ Everything since build step 1 has only been tested against stand-in objects, so 
 - [ ] Save while that token is the current combatant: the strip updates without waiting for the next turn.
 - [ ] "Clear this setting" then Save removes the token's override.
 
+## 5b. Role tagging (PC tokens)
+- [ ] Right-click a PC token: a tag button appears on the Token HUD. (Fallback: select it and run `game.modules.get("monster-brain").api.tagRoles()`.)
+- [ ] Tick "caster", add a custom tag, Save, reopen: both are remembered.
+- [ ] With a monster using a `role:caster` rule (e.g. archer or the shipped "Close the distance"), the caster PC becomes the target.
+- [ ] In a combat, choose "This encounter only", untick "use the default roles", pick different roles, Save: the target changes immediately, and a new combat is unaffected.
+- [ ] "Clear" then Save at default scope removes the character's roles.
+- [ ] The "In effect now" line matches what actually happens.
+
 ## 5. Profiles, templates, dry run
 - [ ] `mb.listTemplates()` lists brute, skirmisher, archer, caster, skittish.
 - [ ] Give an archer NPC a profile: `await mb.setProfile(actor, { template: "archer" })`; on its turn "Volley" or "Retreat and shoot" appears, with the bow named, e.g. "Ranged strike (Shortbow)".

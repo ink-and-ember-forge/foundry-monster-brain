@@ -10,6 +10,8 @@ import * as profiles from "./profiles.mjs";
 import * as roles from "./roles.mjs";
 import { dryRun } from "./dryrun.mjs";
 import { MonsterBrainDialog } from "./profile-dialog.mjs";
+import { MonsterBrainRolesDialog } from "./roles-dialog.mjs";
+import { registerTokenHud } from "./hud.mjs";
 import { SUGGESTED_ROLES } from "./engine/targets.mjs";
 import { onCreateChatMessage, onUpdateToken } from "./tracker.mjs";
 
@@ -20,6 +22,15 @@ function configure(token = canvas.tokens?.controlled?.[0]) {
     return null;
   }
   return MonsterBrainDialog.open(token);
+}
+
+/** Open the roles dialog for a PC token (default: the first controlled token). */
+function tagRoles(token = canvas.tokens?.controlled?.[0]) {
+  if (!token) {
+    ui.notifications?.warn("Monster Brain: select a token first.");
+    return null;
+  }
+  return MonsterBrainRolesDialog.open(token);
 }
 
 Hooks.once("init", () => {
@@ -36,7 +47,7 @@ Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "stripExpanded", { scope: "client", config: false, type: Boolean, default: false });
   profiles.registerSettings();
   // Console API until the editor exists: game.modules.get("monster-brain").api
-  game.modules.get(MODULE_ID).api = { ...profiles, ...roles, SUGGESTED_ROLES, dryRun, explain, configure };
+  game.modules.get(MODULE_ID).api = { ...profiles, ...roles, SUGGESTED_ROLES, dryRun, explain, configure, tagRoles };
   console.log(`${MODULE_ID} | init`);
 });
 
@@ -49,20 +60,8 @@ Hooks.once("ready", () => {
   Hooks.on("pf2e.endTurn", () => MonsterBrainStrip.hide());
   Hooks.on("deleteCombat", () => MonsterBrainStrip.hide());
 
-  // A per-token "Monster Brain" button on the Token HUD (right-click a token).
-  Hooks.on("renderTokenHUD", (_app, html, data) => {
-    const tokenDoc = canvas.scene?.tokens.get(data?._id ?? "");
-    if (!tokenDoc?.actor?.isOfType?.("npc")) return;
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.classList.add("control-icon", "mb-hud");
-    btn.dataset.tooltip = "Monster Brain";
-    btn.setAttribute("aria-label", "Monster Brain");
-    btn.innerHTML = '<i class="fa-solid fa-brain"></i>';
-    btn.addEventListener("click", () => MonsterBrainDialog.open(tokenDoc));
-    const anchor = html.querySelector(".control-icon[data-palette=effects]") ?? html.querySelector(".control-icon");
-    anchor?.after(btn);
-  });
+  // Per-token "Monster Brain" buttons on the Token HUD (right-click a token).
+  registerTokenHud();
 
   // Action tracking: detected actions and corrections change a Combat flag, which re-evaluates.
   Hooks.on("createChatMessage", onCreateChatMessage);

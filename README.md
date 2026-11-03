@@ -76,7 +76,12 @@ mb.dryRun("Goblin Archer", { round: 3 });
 
 ## Role tags and targets
 
-Tag your PCs so rules can prefer them (tags are free-form; suggested: caster, healer, squishy, frontliner, ranged, support):
+Tag your PCs so rules can prefer them. **Right-click a PC token and click the tag button on the Token HUD** (or select it and run `game.modules.get("monster-brain").api.tagRoles()`). Tick suggested roles or type your own (free-form; suggested: caster, healer, squishy, frontliner, ranged, support), then choose where it applies:
+
+- **The character in every encounter** (the default), or
+- **This encounter only**, which overrides the default for that fight (available when the token is in the current combat; or tick "use the default roles" to drop the override).
+
+The same thing from the console:
 
 ```js
 const mb = game.modules.get("monster-brain").api;

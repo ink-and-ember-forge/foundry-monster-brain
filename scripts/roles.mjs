@@ -10,6 +10,8 @@ const baseActor = (actor) => actor.baseActor ?? actor;
 export const getActorRoles = (actor) => normaliseRoles(baseActor(actor).getFlag(MODULE_ID, "roles"));
 export const setActorRoles = (actor, tags) => baseActor(actor).setFlag(MODULE_ID, "roles", normaliseRoles(tags));
 
+export const clearActorRoles = (actor) => baseActor(actor).unsetFlag(MODULE_ID, "roles");
+
 /** The raw per-encounter override, or null when there is none. */
 export const getCombatantRoles = (combatant) => combatant.getFlag(MODULE_ID, "roles") ?? null;
 /** Pass null to remove the override and fall back to the campaign default. */
