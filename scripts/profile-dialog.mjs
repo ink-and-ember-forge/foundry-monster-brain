@@ -31,6 +31,7 @@ import {
 import { dryRun } from "./dryrun.mjs";
 import { itemsFor } from "./adapter.mjs";
 import { refresh } from "./turn-watcher.mjs";
+import { MonsterBrainEditor } from "./template-editor.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -147,6 +148,8 @@ export class MonsterBrainDialog extends ApplicationV2 {
     select.value = templateToValue(this.draft, this.scope);
     select.addEventListener("change", () => this.#setDraft(setTemplate(this.draft, valueToTemplate(select.value))));
     sec.append(select);
+    const chosen = valueToTemplate(select.value) ?? getProfile(this.actor)?.template ?? null;
+    sec.append(button("Edit templates\u2026", () => MonsterBrainEditor.open({ templateId: chosen }), { title: "Open the template and rule editor" }));
     return sec;
   }
 

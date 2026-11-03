@@ -54,6 +54,19 @@ Everything since build step 1 has only been tested against stand-in objects, so 
 - [ ] "Clear" then Save at default scope removes the character's roles.
 - [ ] The "In effect now" line matches what actually happens.
 
+## 5c. Template and rule editor
+- [ ] Game Settings > Configure Settings > Monster Brain > "Open editor" opens it (also: "Edit templates…" in a token's dialog, and `api.editTemplates()`).
+- [ ] Starters show as read-only; Duplicate makes an editable copy.
+- [ ] Edit a rule: rename it, add a condition, change its parameters, add/reorder actions, add a role target preference, set a limit. Typing in a field keeps focus; the summary sentence updates as you type.
+- [ ] Click Save straight after typing in a field (without clicking elsewhere): the change is saved (this was a deliberate design point).
+- [ ] Apply the copy to a token (token dialog > template), run the dry run or start a combat: it behaves as the sentence describes.
+- [ ] Save while a combat is running: the strip changes without waiting for the next turn.
+- [ ] Switch off a shipped rule for a template; confirm it stops appearing for tokens using it.
+- [ ] Unsaved changes: switching templates or closing asks to confirm.
+- [ ] Delete a template; a token that used it shows a "template does not exist" warning rather than breaking.
+- [ ] Campaign policies tab: change the repeat cap, set "no limit", and see the effect on suggestions.
+- [ ] Does the 640px window feel usable? Anything you'd have to scroll for too often?
+
 ## 5. Profiles, templates, dry run
 - [ ] `mb.listTemplates()` lists brute, skirmisher, archer, caster, skittish.
 - [ ] Give an archer NPC a profile: `await mb.setProfile(actor, { template: "archer" })`; on its turn "Volley" or "Retreat and shoot" appears, with the bow named, e.g. "Ranged strike (Shortbow)".

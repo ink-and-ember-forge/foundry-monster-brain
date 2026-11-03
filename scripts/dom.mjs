@@ -15,3 +15,20 @@ export function button(text, onClick, { title, disabled, cls } = {}) {
   b.addEventListener("click", onClick);
   return b;
 }
+
+/** Escape text for use inside an HTML string. */
+export function escapeHtml(text) {
+  const d = document.createElement("div");
+  d.textContent = String(text);
+  return d.innerHTML;
+}
+
+/** Ask the GM to confirm. Uses Foundry's DialogV2 when present, else the browser's confirm. Resolves true/false. */
+export async function confirmDialog(message, title = "Monster Brain") {
+  const DialogV2 = globalThis.foundry?.applications?.api?.DialogV2;
+  if (DialogV2?.confirm) {
+    const result = await DialogV2.confirm({ window: { title }, content: `<p>${escapeHtml(message)}</p>`, rejectClose: false, yes: { default: false } });
+    return result === true;
+  }
+  return globalThis.confirm(message);
+}

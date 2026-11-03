@@ -25,6 +25,14 @@ Behaviour is set **per token**, so two goblins from the same actor sheet can act
 3. Choose where it applies: **this token only** (default), or **every token of the actor** as a default that individual tokens can override. A token's own settings always win; its template replaces the actor's.
 4. **Save.** If that token is acting right now, the strip updates straight away.
 
+## Template and rule editor
+
+Open it from **Game Settings > Configure Settings > Monster Brain > Open editor**, from **Edit templates…** in a token's Monster Brain dialog, or with `game.modules.get("monster-brain").api.editTemplates()`.
+
+- **Templates tab:** create, duplicate, edit and delete templates. The five starters are read-only; click **Duplicate** to make an editable copy. Each rule is a card showing a one-line sentence ("When … : … Target: …"). Open it to edit its **conditions** (all must hold; tick *not* to negate), the **actions** to do in order (including your own custom slots), **target preferences** in order, **limits** (once per encounter, max per turn, cooldown) and **hint** text. Higher rules win. You can also switch off any of the shipped default rules for the template. Warnings appear on the rule they belong to.
+- **Campaign policies tab:** the repeat cap (stop suggesting the same action more than N times a turn), or turn it off.
+- Saving updates a running combat's suggestion straight away. Tokens that use a template pick up changes automatically.
+
 ## Authoring (console)
 
 Everything the dialog does is also available from the console. `setProfile(actor, ...)` sets the actor-wide default; `setTokenProfile(token, ...)` sets one token.

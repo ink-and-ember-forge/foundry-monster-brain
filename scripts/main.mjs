@@ -12,6 +12,7 @@ import { dryRun } from "./dryrun.mjs";
 import { MonsterBrainDialog } from "./profile-dialog.mjs";
 import { MonsterBrainRolesDialog } from "./roles-dialog.mjs";
 import { registerTokenHud } from "./hud.mjs";
+import { MonsterBrainEditor } from "./template-editor.mjs";
 import { SUGGESTED_ROLES } from "./engine/targets.mjs";
 import { onCreateChatMessage, onUpdateToken } from "./tracker.mjs";
 
@@ -22,6 +23,24 @@ function configure(token = canvas.tokens?.controlled?.[0]) {
     return null;
   }
   return MonsterBrainDialog.open(token);
+}
+
+/** Open the template and rule editor (optionally on one template, or the campaign tab). */
+function editTemplates(opts) {
+  return MonsterBrainEditor.open(typeof opts === "string" ? { templateId: opts } : opts);
+}
+
+/**
+ * Settings > Configure Settings > Monster Brain > "Templates and policies". Foundry does
+ * `new type().render(true)`, so this tiny shim opens our editor instead of being a form itself.
+ */
+class EditorMenuShim {
+  constructor() {
+    MonsterBrainEditor.open();
+  }
+  render() {
+    return this;
+  }
 }
 
 /** Open the roles dialog for a PC token (default: the first controlled token). */
@@ -46,8 +65,16 @@ Hooks.once("init", () => {
   });
   game.settings.register(MODULE_ID, "stripExpanded", { scope: "client", config: false, type: Boolean, default: false });
   profiles.registerSettings();
+  game.settings.registerMenu(MODULE_ID, "editor", {
+    name: "Templates and policies",
+    label: "Open editor",
+    hint: "Create and edit behaviour templates and rules, and set campaign-wide policies.",
+    icon: "fa-solid fa-brain",
+    type: EditorMenuShim,
+    restricted: true,
+  });
   // Console API until the editor exists: game.modules.get("monster-brain").api
-  game.modules.get(MODULE_ID).api = { ...profiles, ...roles, SUGGESTED_ROLES, dryRun, explain, configure, tagRoles };
+  game.modules.get(MODULE_ID).api = { ...profiles, ...roles, SUGGESTED_ROLES, dryRun, explain, configure, tagRoles, editTemplates };
   console.log(`${MODULE_ID} | init`);
 });
 

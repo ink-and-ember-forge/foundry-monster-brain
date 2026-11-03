@@ -50,3 +50,19 @@
 .monster-brain .mb-footer { justify-content: flex-end; }
 .monster-brain .mb-hud { cursor: pointer; }
 .monster-brain .mb-custom { flex: 1; }
+.monster-brain.mb-editor .window-content { padding: 8px 12px; overflow-y: auto; }
+.monster-brain .mb-tabs { margin-bottom: 6px; }
+.monster-brain .mb-tab.active { font-weight: bold; box-shadow: inset 0 -2px 0 currentColor; }
+.monster-brain .mb-field { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
+.monster-brain .mb-fieldlabel { font-size: var(--font-size-12, 12px); opacity: 0.8; }
+.monster-brain .mb-banner { padding: 4px 8px; border: 1px dashed; margin: 6px 0; }
+.monster-brain .mb-body { border: 0; padding: 0; margin: 0; }
+.monster-brain .mb-rulecard { border: 1px solid var(--color-border-light-tertiary, #888); border-radius: 4px; padding: 4px 8px; margin: 6px 0; }
+.monster-brain .mb-rulecard > summary { cursor: pointer; }
+.monster-brain .mb-rulesentence { display: block; }
+.monster-brain .mb-cond, .monster-brain .mb-action, .monster-brain .mb-target { gap: 4px; margin-bottom: 3px; }
+.monster-brain .mb-param { width: 7em; }
+.monster-brain .mb-limit { width: 4em; }
+.monster-brain .mb-warnlist { margin: 2px 0 2px 16px; padding: 0; font-size: var(--font-size-12, 12px); color: var(--color-level-warning, #c60); }
+.monster-brain .mb-picker { flex: 1; }
+.monster-brain .mb-ruleshead { justify-content: space-between; margin-top: 8px; }
