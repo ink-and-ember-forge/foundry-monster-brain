@@ -4,7 +4,7 @@ export default [
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: "module",
-      globals: { game: "readonly", canvas: "readonly", Hooks: "readonly", ui: "readonly", foundry: "readonly", console: "readonly" }
+      globals: { window: "readonly", document: "readonly", game: "readonly", canvas: "readonly", Hooks: "readonly", ui: "readonly", foundry: "readonly", console: "readonly" }
     },
     rules: {}
   }

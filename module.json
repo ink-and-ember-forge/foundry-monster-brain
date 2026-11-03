@@ -4,7 +4,7 @@
   "description": "GM-only tactical advisor for Pathfinder 2e. Author monster behaviour rules in prep; get one or two suggested actions on each monster's turn. Advises only: never moves tokens or rolls dice.",
   "version": "0.0.1",
   "authors": [{ "name": "Ink & Ember Forge" }],
-  "compatibility": { "minimum": "12", "verified": "12" },
+  "compatibility": { "minimum": "13", "verified": "14" },
   "relationships": {
     "systems": [{ "id": "pf2e", "type": "system", "compatibility": {} }]
   },

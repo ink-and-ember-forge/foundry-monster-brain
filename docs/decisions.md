@@ -8,7 +8,7 @@ Evidence base: `foundryvtt/pf2e` `v14-dev` @ `0b3845d` (2026-11-03, system 8.6.1
 
 | # | Item | Status |
 |---|---|---|
-| V1 | Target Foundry version | **Needs decision** (see V1 below) |
+| V1 | Target Foundry version | **Decided: v13 and v14** (see V1) |
 | V2 | PF2e actor data | **Verified** (see V2) |
 | V3 | Chat card flags | **Verified** (see V3) |
 | V4 | Flanking | **Verified, deferred to v1.1** |
@@ -25,7 +25,9 @@ The `foundryvtt/pf2e` branches disagree, which is easy to misread:
 | `v13-dev` | 7.12.2 | min 13.348, verified 13.351 |
 | `release` / `master` | 6.12.4 | 12.328 to 12.331 (stale) |
 
-The live PF2e line is v14. A first read of `master` suggested v12; that was a stale branch. `module.json` is currently set to v12 and should be revisited.
+The live PF2e line is v14. A first read of `master` suggested v12; that was a stale branch.
+
+**Decision:** support Foundry v13 and v14 (`module.json` min 13, verified 14). Use only ApplicationV2 APIs present in both, and test on both before release.
 
 ### V2: Actor and token data (PF2e)
 - **HP:** `actor.system.attributes.hp` (`value`, `max`, `temp`).

@@ -1,1 +1,10 @@
-/* Monster Brain styles. Panel styles arrive with build step 1. */
+.monster-brain.mb-strip .window-content {
+  padding: 6px 10px;
+  min-height: 0;
+}
+.monster-brain .mb-strip-body {
+  font-size: var(--font-size-14, 14px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
