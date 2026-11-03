@@ -40,3 +40,12 @@
 .monster-brain .mb-section summary { cursor: pointer; font-size: var(--font-size-12, 12px); }
 .monster-brain .mb-section ul { margin: 2px 0 2px 16px; padding: 0; font-size: var(--font-size-12, 12px); }
 .monster-brain .mb-toggle { padding: 0 6px; }
+.monster-brain.mb-dialog .window-content { padding: 8px 12px; overflow-y: auto; }
+.monster-brain .mb-form fieldset { margin: 0 0 8px; padding: 4px 8px; }
+.monster-brain .mb-radio, .monster-brain .mb-rule { display: flex; align-items: center; gap: 4px; }
+.monster-brain .mb-slot { justify-content: space-between; }
+.monster-brain .mb-slotname { font-weight: bold; min-width: 8em; }
+.monster-brain .mb-warn { color: var(--color-level-warning, #c60); }
+.monster-brain .mb-preview { white-space: pre-wrap; font-size: var(--font-size-12, 12px); max-height: 14em; overflow-y: auto; margin: 0; }
+.monster-brain .mb-footer { justify-content: flex-end; }
+.monster-brain .mb-hud { cursor: pointer; }

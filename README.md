@@ -16,7 +16,18 @@ npm test
 
 No build step. Link the repo into your Foundry `Data/modules/` folder as `monster-brain` and enable it in a PF2e world.
 
-## Authoring (console, until the editor exists)
+## Applying a template (per token)
+
+Behaviour is set **per token**, so two goblins from the same actor sheet can act differently.
+
+1. Right-click an NPC token on the map and click the **brain** button on the Token HUD. (No button? Select the token and run `game.modules.get("monster-brain").api.configure()` in the console, or make that a hotbar macro.)
+2. Pick a **template**, switch individual **rules** off, and **bind slots** (e.g. pick which spell is the creature's `signature`). A live **preview** shows what it would suggest on this scene, with your unsaved changes.
+3. Choose where it applies: **this token only** (default), or **every token of the actor** as a default that individual tokens can override. A token's own settings always win; its template replaces the actor's.
+4. **Save.** If that token is acting right now, the strip updates straight away.
+
+## Authoring (console)
+
+Everything the dialog does is also available from the console. `setProfile(actor, ...)` sets the actor-wide default; `setTokenProfile(token, ...)` sets one token.
 
 Rules are layered: system defaults, campaign, template, creature, encounter. A later layer replaces a rule with the same `id`, disables it with `disable`, or adds new rules, which rank ahead of rules from more general layers (so your template beats the shipped defaults; set `priority` on a rule to override position). Run these in the browser console (F12) as a GM:
 
@@ -53,9 +64,11 @@ Five starter templates ship with the module: **brute, skirmisher, archer, caster
 ```js
 const mb = game.modules.get("monster-brain").api;
 mb.listTemplates();                                   // what's available and where it comes from
-await mb.setProfile(game.actors.getName("Goblin Archer"), { template: "archer" });
+await mb.setTokenProfile(canvas.tokens.controlled[0], { template: "archer" });   // one token
+await mb.setProfile(game.actors.getName("Goblin Archer"), { template: "archer" });  // or every token of the actor
 await mb.installStarterTemplates(["archer"]);         // copy a starter into your world to edit it
-mb.dryRun("Goblin Archer");                           // preview, no combat needed
+mb.dryRun(canvas.tokens.controlled[0]);               // preview one token, no combat needed
+mb.dryRun("Goblin Archer");                           // or by actor name (uses its first token)
 mb.dryRun("Goblin Archer", { round: 3 });
 ```
 

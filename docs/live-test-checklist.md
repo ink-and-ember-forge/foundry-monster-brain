@@ -37,6 +37,15 @@ Everything since build step 1 has only been tested against stand-in objects, so 
 - [ ] "Something else" cycles suggestions; taking an action resets it.
 - [ ] Layout: is 380px wide enough? Does it cover the combat tracker or hotbar?
 
+## 5a. Configure dialog (per token)
+- [ ] Right-click an NPC token: a brain button appears on the Token HUD. (If not, `game.modules.get("monster-brain").api.configure()` with the token selected should open it; tell me the HUD layout you see.)
+- [ ] Put two tokens of the same actor on the map. Give token A the `archer` template, leave token B alone. On their turns A suggests archer rules and B does not.
+- [ ] In the dialog, the preview changes as you change template, untick a rule, or bind a slot (before saving).
+- [ ] "This token only" vs "Every <actor> token": saving at actor level affects both tokens, and a token-level template still wins on A.
+- [ ] Reopen the dialog on a saved token: the saved choices are shown.
+- [ ] Save while that token is the current combatant: the strip updates without waiting for the next turn.
+- [ ] "Clear this setting" then Save removes the token's override.
+
 ## 5. Profiles, templates, dry run
 - [ ] `mb.listTemplates()` lists brute, skirmisher, archer, caster, skittish.
 - [ ] Give an archer NPC a profile: `await mb.setProfile(actor, { template: "archer" })`; on its turn "Volley" or "Retreat and shoot" appears, with the bow named, e.g. "Ranged strike (Shortbow)".

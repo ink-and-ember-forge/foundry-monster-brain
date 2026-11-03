@@ -66,6 +66,31 @@ describe("resolveProfile: merge", () => {
   });
 });
 
+describe("resolveProfile: per-token layer", () => {
+  it("a token's rules and disables override its actor's, and rank ahead of them", () => {
+    const res = resolveProfile({
+      system: { rules: [r("a")] },
+      creature: { rules: [r("c")], disable: ["a"] },
+      token: { rules: [r("t")], disable: ["c"] },
+    });
+    expect(ids(res)).toEqual(["t", "c", "a"]);
+    expect(res.rules.find((x) => x.id === "c")).toMatchObject({ enabled: false, disabledBy: "token" });
+    expect(res.rules.find((x) => x.id === "a")).toMatchObject({ enabled: false, disabledBy: "creature" });
+  });
+  it("a token can replace its actor's rule in place", () => {
+    const res = resolveProfile({ creature: { rules: [r("c", { label: "actor" })] }, token: { rules: [r("c", { label: "token" })] } });
+    expect(res.rules[0]).toMatchObject({ label: "token", source: "token" });
+  });
+  it("token slot bindings beat the actor's; encounter beats the token", () => {
+    const res = resolveProfile({ creature: { slotBindings: { s: "actor" } }, token: { slotBindings: { s: "token" } } });
+    expect(res.slotBindings.s).toBe("token");
+    expect(resolveProfile({ token: { slotBindings: { s: "token" } }, encounter: { slotBindings: { s: "enc" } } }).slotBindings.s).toBe("enc");
+  });
+  it("token policies merge over the actor's", () => {
+    expect(resolveProfile({ creature: { policies: { a: 1, b: 2 } }, token: { policies: { b: null } } }).policies).toEqual({ a: 1 });
+  });
+});
+
 describe("resolveProfile: slots", () => {
   it("derives slots from enabled rules, excluding movement", () => {
     const res = resolveProfile({ system: { rules: [r("a", { do: ["stride-away", "ranged-strike", "signature"] }), r("b", { do: ["melee-strike"], enabled: false })] } });

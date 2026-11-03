@@ -10,26 +10,11 @@ import {
   alternativeOf,
 } from "./engine/suggestion.mjs";
 import { actionLabel, MANUAL_ACTION_KEYS } from "./engine/actions.mjs";
+import { el, button } from "./dom.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
 
 const WIDTH = 380;
-
-function el(tag, { cls, text, title, attrs } = {}) {
-  const node = document.createElement(tag);
-  if (cls) node.classList.add(...[].concat(cls).flatMap((c) => c.split(/\s+/)).filter(Boolean));
-  if (text != null) node.textContent = text;
-  if (title) node.title = title;
-  for (const [k, v] of Object.entries(attrs ?? {})) node.setAttribute(k, v);
-  return node;
-}
-
-function button(text, onClick, { title, disabled, cls } = {}) {
-  const b = el("button", { text, title, cls, attrs: { type: "button" } });
-  b.disabled = !!disabled;
-  b.addEventListener("click", onClick);
-  return b;
-}
 
 /**
  * GM-only panel: a slim one-line strip, expandable to the full card (brief section 11).

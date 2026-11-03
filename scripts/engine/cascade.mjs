@@ -1,7 +1,8 @@
 /**
  * Customisation cascade (brief section 8). Pure.
  *
- * Layers, general to specific: system, campaign, template, creature, encounter.
+ * Layers, general to specific: system, campaign, template, creature (the actor), token (one token
+ * on the map; overrides its actor so two goblins from one sheet can differ), encounter.
  * Each layer is { rules?, disable?, policies?, slots?, slotBindings? }.
  *   - A rule with an existing id REPLACES it in place (position is priority, so it is kept).
  *   - A new id goes AHEAD of every rule from more general layers (rule order is priority, so a
@@ -17,12 +18,13 @@
 export const BUILTIN_ACTIONS = ["stride", "stride-away"];
 
 /** @returns {{ rules: Rule[], policies: object, slots: string[], slotBindings: object, issues: Issue[] }} */
-export function resolveProfile({ system, campaign, template, creature, encounter } = {}) {
+export function resolveProfile({ system, campaign, template, creature, token, encounter } = {}) {
   const layers = [
     ["system", system],
     ["campaign", campaign],
     ["template", template],
     ["creature", creature],
+    ["token", token],
     ["encounter", encounter],
   ].filter(([, l]) => l);
 

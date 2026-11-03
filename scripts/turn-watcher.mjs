@@ -10,13 +10,13 @@ import { resolveFor } from "./profiles.mjs";
 /** Everything the pipeline produces for a combatant right now. Also backs the console `explain` API. */
 export function compute(combat, combatant) {
   const history = readHistory(combat);
-  const { resolved, binding, warnings, profile } = resolveFor(combatant);
+  const { resolved, binding, warnings, templateId } = resolveFor(combatant);
   const ctx = {
     ...buildContext(combatant, combat, history),
     slots: { bound: binding.bound, unbound: binding.unbound },
   };
   const result = evaluate(resolved.rules, ctx, { policies: resolved.policies, max: 3 });
-  return { history, ctx, result, resolved, binding, warnings, templateName: profile?.template ?? null };
+  return { history, ctx, result, resolved, binding, warnings, templateName: templateId };
 }
 
 /**

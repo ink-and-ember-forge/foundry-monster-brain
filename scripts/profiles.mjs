@@ -1,6 +1,7 @@
 /**
  * Storage for the cascade layers (docs/decisions.md V6):
- *   creature profile    flag  actor.flags.monster-brain.profile      (on the base actor, so all tokens share it)
+ *   actor profile       flag  actor.flags.monster-brain.profile      (on the base actor: a default for all its tokens)
+ *   token profile       flag  tokenDocument.flags.monster-brain.profile  (one token; overrides the actor's)
  *   encounter overrides flag  combatant.flags.monster-brain.overrides
  *   templates           world setting `templates`  { [id]: template }
  *   campaign            world setting `campaign`   { policies, ... }
@@ -29,6 +30,12 @@ export function registerSettings() {
 export const getProfile = (actor) => baseActor(actor).getFlag(MODULE_ID, "profile") ?? null;
 export const setProfile = (actor, profile) => replaceFlag(baseActor(actor), "profile", profile);
 export const clearProfile = (actor) => replaceFlag(baseActor(actor), "profile", null);
+
+/** Accepts a TokenDocument or a Token placeable. */
+const tokenDocOf = (token) => token?.document ?? token;
+export const getTokenProfile = (token) => tokenDocOf(token).getFlag(MODULE_ID, "profile") ?? null;
+export const setTokenProfile = (token, profile) => replaceFlag(tokenDocOf(token), "profile", profile);
+export const clearTokenProfile = (token) => replaceFlag(tokenDocOf(token), "profile", null);
 
 export const getOverrides = (combatant) => combatant.getFlag(MODULE_ID, "overrides") ?? null;
 export const setOverrides = (combatant, overrides) => replaceFlag(combatant, "overrides", overrides);
@@ -72,24 +79,37 @@ export async function installStarterTemplates(ids = STARTER_TEMPLATE_IDS, { over
 export const getCampaign = () => game.settings.get(MODULE_ID, "campaign") ?? {};
 export const setCampaign = (campaign) => game.settings.set(MODULE_ID, "campaign", campaign ?? {});
 
-/** Resolve every cascade layer for a combatant. */
-export const resolveFor = (combatant) => resolveForActor(combatant.actor, getOverrides(combatant));
+/** Resolve every cascade layer for a combatant (its token's profile applies, not just the actor's). */
+export const resolveFor = (combatant) =>
+  resolveForActor(combatant.actor, { tokenDoc: combatant.token ?? null, encounter: getOverrides(combatant) });
 
-/** Resolve the cascade for an actor, with optional encounter overrides (none outside combat). */
-export function resolveForActor(actor, encounterOverrides = null) {
-  const profile = getProfile(actor);
-  const template = profile?.template ? templateById(profile.template) : null;
+/**
+ * Resolve the cascade for an actor, and optionally one of its tokens.
+ * A token's profile overrides the actor's; its `template` (if the key is present) replaces the
+ * actor's, with null meaning "no template". `draft` previews unsaved edits:
+ * { scope: "token" | "actor", profile } replaces that layer's stored profile.
+ */
+export function resolveForActor(actor, { tokenDoc = null, encounter = null, draft = null } = {}) {
+  let actorProfile = getProfile(actor);
+  let tokenProfile = tokenDoc ? getTokenProfile(tokenDoc) : null;
+  if (draft) {
+    if (draft.scope === "actor") actorProfile = draft.profile ?? null;
+    else tokenProfile = draft.profile ?? null;
+  }
+  const templateId = tokenProfile && "template" in tokenProfile ? tokenProfile.template : actorProfile?.template;
+  const template = templateId ? templateById(templateId) : null;
   const resolved = resolveProfile({
     system: SYSTEM_LAYER,
     campaign: getCampaign(),
     template,
-    creature: profile,
-    encounter: encounterOverrides,
+    creature: actorProfile,
+    token: tokenProfile,
+    encounter,
   });
   const binding = bindSlots(resolved.slots, resolved.slotBindings, itemsFor(actor));
   const warnings = validate(resolved, binding);
-  if (profile?.template && !template) {
-    warnings.push({ level: "warn", ruleId: null, message: `template "${profile.template}" does not exist` });
+  if (templateId && !template) {
+    warnings.push({ level: "warn", ruleId: null, message: `template "${templateId}" does not exist` });
   }
-  return { resolved, binding, warnings, profile };
+  return { resolved, binding, warnings, templateId: templateId ?? null, actorProfile, tokenProfile };
 }
