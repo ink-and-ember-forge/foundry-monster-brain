@@ -50,6 +50,12 @@ describe("pickTarget", () => {
     expect(name(pickTarget(d, ["nearest"]))).toBe("Near");
     expect(name(pickTarget(d, ["farthest"]))).toBe("Far");
   });
+  it("in-reach first, then lowest HP among those in reach", () => {
+    const e2 = [e("FarWeak", 5, { inReach: false }), e("NearA", 70, { inReach: true }), e("NearB", 40, { inReach: true })];
+    expect(name(pickTarget(e2, ["in-reach", "lowest-hp"]))).toBe("NearB");
+    expect(name(pickTarget([e("A", 60), e("B", 30)], ["in-reach", "lowest-hp"]))).toBe("B");
+    expect(describeSelector(["in-reach", "lowest-hp"])).toBe("in reach, then lowest HP");
+  });
   it("highest HP", () => {
     expect(name(pickTarget(party, ["highest-hp"]))).toBe("Tank");
   });

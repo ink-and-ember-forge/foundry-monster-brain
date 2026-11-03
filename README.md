@@ -18,7 +18,7 @@ No build step. Link the repo into your Foundry `Data/modules/` folder as `monste
 
 ## Authoring (console, until the editor exists)
 
-Rules are layered: system defaults, campaign, template, creature, encounter. A later layer replaces a rule with the same `id`, disables it with `disable`, or adds new rules. Run these in the browser console (F12) as a GM:
+Rules are layered: system defaults, campaign, template, creature, encounter. A later layer replaces a rule with the same `id`, disables it with `disable`, or adds new rules, which rank ahead of rules from more general layers (so your template beats the shipped defaults; set `priority` on a rule to override position). Run these in the browser console (F12) as a GM:
 
 ```js
 const mb = game.modules.get("monster-brain").api;
@@ -46,6 +46,21 @@ mb.explain();
 
 Slots like `melee-strike` and `ranged-strike` bind automatically to the creature's first matching attack. Other slots (e.g. `signature`) are never guessed; bind them with `slotBindings`. `mb.explain()` lists validation warnings. Edits take effect from the next evaluation (next turn, or any action taken).
 
+## Starter templates and dry run
+
+Five starter templates ship with the module: **brute, skirmisher, archer, caster, skittish**. They are starting points to tweak.
+
+```js
+const mb = game.modules.get("monster-brain").api;
+mb.listTemplates();                                   // what's available and where it comes from
+await mb.setProfile(game.actors.getName("Goblin Archer"), { template: "archer" });
+await mb.installStarterTemplates(["archer"]);         // copy a starter into your world to edit it
+mb.dryRun("Goblin Archer");                           // preview, no combat needed
+mb.dryRun("Goblin Archer", { round: 3 });
+```
+
+`dryRun` evaluates the creature against the visible hostile tokens on the current scene and prints what it would suggest, why, what was held back, and any warnings. It needs a token for the creature on the scene to know distances; without one, reach and distance rules cannot fire (the report says so). Casters and anything using `signature` need that slot bound (`slotBindings`).
+
 ## Role tags and targets
 
 Tag your PCs so rules can prefer them (tags are free-form; suggested: caster, healer, squishy, frontliner, ranged, support):
@@ -57,7 +72,7 @@ await mb.setCombatantRoles(game.combat.combatants.getName("Mira"), ["caster", "s
 await mb.setCombatantRoles(game.combat.combatants.getName("Mira"), null);                  // remove the override
 ```
 
-A rule's `target` is an ordered list of preferences, applied in order: `["role:caster", "lowest-hp"]` means casters first, then lowest HP among them. Other entries: `highest-hp`, `nearest`, `farthest`. An encounter override replaces the PC's default tags for that combat.
+A rule's `target` is an ordered list of preferences, applied in order: `["role:caster", "lowest-hp"]` means casters first, then lowest HP among them. Other entries: `highest-hp`, `nearest`, `farthest`, and `in-reach` (enemies the creature can hit now; use it in melee rules). An encounter override replaces the PC's default tags for that combat.
 
 ## Installing from a release
 

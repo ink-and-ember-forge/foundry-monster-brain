@@ -4,6 +4,7 @@
  * A selector is an ordered list of preferences. Each entry ranks enemies, and entries are applied
  * lexicographically: the first entry decides, later entries break ties, then original order.
  *   "role:<tag>"  enemies with the tag first          "lowest-hp" / "highest-hp"  by HP percent
+ *   "in-reach"    enemies within my attack reach first (melee rules: pick someone you can hit)
  *   "nearest" / "farthest"  by distance (unknown distances sort last)
  * So ["role:caster", "lowest-hp"] is "casters first, then lowest HP"; ["lowest-hp", "role:caster"]
  * is "lowest HP, casters win ties". Unknown entries are ignored (and flagged by validate()).
@@ -15,13 +16,14 @@ export const SUGGESTED_ROLES = ["caster", "healer", "squishy", "frontliner", "ra
 export const DEFAULT_SELECTOR = ["lowest-hp"];
 
 const RANKERS = {
+  "in-reach": (e) => (e.inReach === true ? 0 : 1),
   "lowest-hp": (e) => e.hpPercent,
   "highest-hp": (e) => -e.hpPercent,
   nearest: (e) => e.distance ?? Infinity,
   farthest: (e) => (e.distance == null ? Infinity : -e.distance),
 };
 
-const LABELS = { "lowest-hp": "lowest HP", "highest-hp": "highest HP", nearest: "nearest", farthest: "farthest" };
+const LABELS = { "in-reach": "in reach", "lowest-hp": "lowest HP", "highest-hp": "highest HP", nearest: "nearest", farthest: "farthest" };
 
 const roleOf = (entry) => (typeof entry === "string" && entry.startsWith("role:") ? entry.slice(5).trim().toLowerCase() : null);
 

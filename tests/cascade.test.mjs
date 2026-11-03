@@ -9,10 +9,20 @@ const r = (id, extra = {}) => ({ id, label: id, when: [], do: ["melee-strike"], 
 const ids = (resolved) => resolved.rules.map((x) => x.id);
 
 describe("resolveProfile: merge", () => {
-  it("adds new rules in layer order", () => {
+  it("puts new rules from more specific layers ahead of more general ones", () => {
     const res = resolveProfile({ system: { rules: [r("a")] }, template: { rules: [r("b")] }, creature: { rules: [r("c")] } });
-    expect(ids(res)).toEqual(["a", "b", "c"]);
-    expect(res.rules.map((x) => x.source)).toEqual(["system", "template", "creature"]);
+    expect(ids(res)).toEqual(["c", "b", "a"]);
+    expect(res.rules.map((x) => x.source)).toEqual(["creature", "template", "system"]);
+  });
+  it("keeps order within a layer", () => {
+    const res = resolveProfile({ system: { rules: [r("a")] }, template: { rules: [r("b1"), r("b2")] } });
+    expect(ids(res)).toEqual(["b1", "b2", "a"]);
+  });
+  it("a template rule outranks the shipped always-true fallback", () => {
+    const res = resolveProfile({ system: SYSTEM_LAYER, template: { rules: [r("volley")] } });
+    const out = evaluate(res.rules, { round: 5, self: { name: "G", hpPercent: 100, conditions: [] }, enemies: [] });
+    expect(out.suggestions[0].id).toBe("volley");
+    expect(ids(res).at(-1)).toBe("fallback-strikes");
   });
   it("replaces a rule with the same id in place, keeping its priority position", () => {
     const res = resolveProfile({ system: { rules: [r("a"), r("b")] }, creature: { rules: [r("a", { label: "mine" })] } });

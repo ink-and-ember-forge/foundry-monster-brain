@@ -11,6 +11,7 @@ import { resolveProfile } from "./engine/cascade.mjs";
 import { bindSlots } from "./engine/slots.mjs";
 import { validate } from "./engine/validate.mjs";
 import { SYSTEM_LAYER } from "./engine/default-rules.mjs";
+import { STARTER_TEMPLATES, STARTER_TEMPLATE_IDS } from "./engine/starter-templates.mjs";
 import { itemsFor } from "./adapter.mjs";
 
 const baseActor = (actor) => actor.baseActor ?? actor;
@@ -38,20 +39,52 @@ export function deleteTemplate(id) {
   const { [id]: _removed, ...rest } = getTemplates();
   return game.settings.set(MODULE_ID, "templates", rest);
 }
+/**
+ * Template lookup: your own templates (world setting) win over the shipped starters of the same id,
+ * so tweaking a starter is just saving a template with its id (see installStarterTemplates).
+ */
+export const templateById = (id) => getTemplates()[id] ?? STARTER_TEMPLATES[id] ?? null;
+
+/** Every template available, with where it comes from. */
+export function listTemplates() {
+  const world = getTemplates();
+  const ids = [...new Set([...Object.keys(world), ...STARTER_TEMPLATE_IDS])];
+  return ids.map((id) => ({
+    id,
+    name: (world[id] ?? STARTER_TEMPLATES[id]).name ?? id,
+    source: id in world ? (id in STARTER_TEMPLATES ? "yours (overrides starter)" : "yours") : "starter",
+  }));
+}
+
+/** Copy starter templates into your world so you can edit them. Existing ones are kept unless overwrite is true. */
+export async function installStarterTemplates(ids = STARTER_TEMPLATE_IDS, { overwrite = false } = {}) {
+  const world = getTemplates();
+  const installed = [];
+  for (const id of ids) {
+    if (!STARTER_TEMPLATES[id] || (id in world && !overwrite)) continue;
+    world[id] = structuredClone(STARTER_TEMPLATES[id]);
+    installed.push(id);
+  }
+  await game.settings.set(MODULE_ID, "templates", world);
+  return installed;
+}
+
 export const getCampaign = () => game.settings.get(MODULE_ID, "campaign") ?? {};
 export const setCampaign = (campaign) => game.settings.set(MODULE_ID, "campaign", campaign ?? {});
 
 /** Resolve every cascade layer for a combatant. */
-export function resolveFor(combatant) {
-  const actor = combatant.actor;
+export const resolveFor = (combatant) => resolveForActor(combatant.actor, getOverrides(combatant));
+
+/** Resolve the cascade for an actor, with optional encounter overrides (none outside combat). */
+export function resolveForActor(actor, encounterOverrides = null) {
   const profile = getProfile(actor);
-  const template = profile?.template ? getTemplates()[profile.template] : null;
+  const template = profile?.template ? templateById(profile.template) : null;
   const resolved = resolveProfile({
     system: SYSTEM_LAYER,
     campaign: getCampaign(),
     template,
     creature: profile,
-    encounter: getOverrides(combatant),
+    encounter: encounterOverrides,
   });
   const binding = bindSlots(resolved.slots, resolved.slotBindings, itemsFor(actor));
   const warnings = validate(resolved, binding);

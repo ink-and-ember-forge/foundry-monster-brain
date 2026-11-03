@@ -8,6 +8,7 @@ import { MonsterBrainStrip } from "./panel.mjs";
 import { refresh, explain } from "./turn-watcher.mjs";
 import * as profiles from "./profiles.mjs";
 import * as roles from "./roles.mjs";
+import { dryRun } from "./dryrun.mjs";
 import { SUGGESTED_ROLES } from "./engine/targets.mjs";
 import { onCreateChatMessage, onUpdateToken } from "./tracker.mjs";
 
@@ -25,7 +26,7 @@ Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "stripExpanded", { scope: "client", config: false, type: Boolean, default: false });
   profiles.registerSettings();
   // Console API until the editor exists: game.modules.get("monster-brain").api
-  game.modules.get(MODULE_ID).api = { ...profiles, ...roles, SUGGESTED_ROLES, explain };
+  game.modules.get(MODULE_ID).api = { ...profiles, ...roles, SUGGESTED_ROLES, dryRun, explain };
   console.log(`${MODULE_ID} | init`);
 });
 
