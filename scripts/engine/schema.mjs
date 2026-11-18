@@ -44,14 +44,33 @@ export const CONDITION_SCHEMA = {
   },
 };
 
-/** Built-in movement plus the standard slots. Anything else is a custom slot the GM names. */
-export const ACTION_CHOICES = [
-  ["melee-strike", "Melee strike"],
-  ["ranged-strike", "Ranged strike"],
-  ["stride", "Stride"],
-  ["stride-away", "Stride away"],
-  ["signature", "Signature action"],
+import { ACTIONS, ACTION_GROUPS } from "./action-catalog.mjs";
+
+/**
+ * Every action the editor offers, in groups. The first group holds the slots that are bound to a real item
+ * (a Strike, or the creature's signature move); the rest are the built-in actions of the catalog
+ * (action-catalog.mjs), which need no binding. Anything else is a custom slot the GM names.
+ * @type {{ label: string, choices: [string, string][] }[]}
+ */
+export const ACTION_CHOICE_GROUPS = [
+  {
+    label: "Attacks",
+    choices: [
+      ["melee-strike", "Melee strike"],
+      ["ranged-strike", "Ranged strike"],
+      ["signature", "Signature action"],
+    ],
+  },
+  ...ACTION_GROUPS.map(([id, label]) => ({
+    label,
+    choices: Object.entries(ACTIONS)
+      .filter(([, a]) => a.group === id)
+      .map(([slug, a]) => [slug, a.label]),
+  })),
 ];
+
+/** The same, flat. */
+export const ACTION_CHOICES = ACTION_CHOICE_GROUPS.flatMap((g) => g.choices);
 
 export const TARGET_CHOICES = [
   ["lowest-hp", "Lowest HP"],

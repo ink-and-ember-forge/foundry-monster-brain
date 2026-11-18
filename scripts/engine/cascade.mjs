@@ -14,8 +14,10 @@
  *   - slotBindings merge by slot; the more specific layer wins.
  */
 
-/** Movement actions are built in; every other action in a bundle is a slot that needs binding. */
-export const BUILTIN_ACTIONS = ["stride", "stride-away"];
+import { BUILTIN_SLUGS } from "./action-catalog.mjs";
+
+/** Built-in actions (movement, Trip, Demoralize, ...) need no item; every other action in a bundle is a slot that needs binding. */
+export const BUILTIN_ACTIONS = BUILTIN_SLUGS;
 
 /** @returns {{ rules: Rule[], policies: object, slots: string[], slotBindings: object, issues: Issue[] }} */
 export function resolveProfile({ system, campaign, template, creature, token, encounter } = {}) {

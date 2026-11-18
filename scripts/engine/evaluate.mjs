@@ -44,6 +44,19 @@ function checkLimits(rule, ctx) {
   return reasons;
 }
 
+/**
+ * The cheap "can it actually do this" checks (decided with the GM: shield yes, free hands no). Raise a Shield needs a
+ * shield in hand, which the adapter reports as ctx.self.hasShield; when that is unknown (undefined) the rule stands.
+ * Everything else a built-in action needs (a free hand, cover) is shown as a reminder instead (action-catalog.mjs).
+ */
+function checkNeeds(bundle, ctx) {
+  const reasons = [];
+  for (const slug of new Set(bundle)) {
+    if (actionInfo(slug)?.needsShield && ctx.self?.hasShield === false) reasons.push(`needs a shield: this creature isn't wielding one for "${actionLabel(slug)}"`);
+  }
+  return reasons;
+}
+
 /** Slot checks. Returns reason strings for strike slots with no item to bind to. */
 function checkSlots(bundle, ctx) {
   const unbound = ctx.slots?.unbound ?? [];
@@ -78,6 +91,7 @@ function checkPolicies(bundle, ctx, policies) {
 }
 import { CONDITIONS, describeCondition } from "./conditions.mjs";
 import { actionLabel, actionKey } from "./actions.mjs";
+import { actionInfo, skillNote } from "./action-catalog.mjs";
 import { STRIKE_SLOTS } from "./slots.mjs";
 import { rankTargets, describeSelector, DEFAULT_SELECTOR } from "./targets.mjs";
 import { planBundle } from "./world.mjs";
@@ -145,7 +159,7 @@ export function evaluate(rules, ctx, { max = 2, policies = {} } = {}) {
       held.push({ id: rule.id, label: rule.label, reasons: ["already done this turn"] });
       return;
     }
-    const blocked = [...checkLimits(rule, ctx), ...checkSlots(todo, ctx)];
+    const blocked = [...checkLimits(rule, ctx), ...checkSlots(todo, ctx), ...checkNeeds(todo, ctx)];
     if (blocked.length > 0) {
       held.push({ id: rule.id, label: rule.label, reasons: blocked });
       return;
@@ -190,7 +204,13 @@ export function evaluate(rules, ctx, { max = 2, policies = {} } = {}) {
     slugs: plan.slugs,
     actions: plan.slugs.map((slug) => slotLabel(slug, ctx)),
     // The plan step by step. The first step is the action to do now; later ones follow.
-    steps: plan.steps.map((st) => ({ slug: st.slug, label: slotLabel(st.slug, ctx), note: st.note, added: st.added })),
+    // A skill action also shows the creature's modifier for it ("Athletics +7"), when the adapter knows it.
+    steps: plan.steps.map((st) => ({
+      slug: st.slug,
+      label: slotLabel(st.slug, ctx),
+      note: [st.note, skillNote(st.slug, ctx.self?.skills)].filter(Boolean).join(" \u00B7 "),
+      added: st.added,
+    })),
     adjustments: plan.adjustments,
     why: (rule.when ?? []).map(describeCondition),
     source: rule.source ?? null,

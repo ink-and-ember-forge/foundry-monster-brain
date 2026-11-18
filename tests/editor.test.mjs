@@ -51,6 +51,10 @@ const refreshMock = vi.fn();
 vi.mock("../scripts/turn-watcher.mjs", () => ({ refresh: (...a) => refreshMock(...a) }));
 
 const { MonsterBrainEditor } = await import("../scripts/template-editor.mjs");
+const { STARTER_TEMPLATES: STARTERS } = await import("../scripts/engine/starter-templates.mjs");
+/** The sniper's rule ids, as the starter defines them: these tests edit a copy of it. */
+const SNIPER_IDS = STARTERS.sniper.rules.map((r) => r.id);
+const VOLLEY = SNIPER_IDS.indexOf("sniper-volley");
 
 let app;
 async function open() {
@@ -127,7 +131,7 @@ describe("duplicating and saving", () => {
     await click("Save");
     await vi.waitFor(() => expect(saved[0][0]).toBe("setTemplate"));
     expect(saved[0][1]).toBe("sniper-copy");
-    expect(saved[0][2].rules.map((r) => r.id)).toEqual(["sniper-retreat-and-shoot", "sniper-volley"]);
+    expect(saved[0][2].rules.map((r) => r.id)).toEqual(SNIPER_IDS);
     expect(app.dirty).toBe(false);
     expect(app.isNew).toBe(false);
     expect(refreshMock).toHaveBeenCalledWith(game.combat);
@@ -155,19 +159,19 @@ describe("typing does not re-render (so Save is never lost)", () => {
   });
   it("editing a number param and a limit does not re-render, and clamps on blur", async () => {
     await editableCopy();
-    app.draft.rules[1].when[1].feet = 60; // sniper-volley: enemy-within 60
+    app.draft.rules[VOLLEY].when[1].feet = 60; // sniper-volley: enemy-within 60
     await app.render();
     const before = app.renders;
-    const volley = qa(".mb-rulecard")[1];
+    const volley = qa(".mb-rulecard")[VOLLEY];
     const feet = volley.querySelector("input.mb-param");
     setVal(feet, "2", "input");
     expect(app.renders).toBe(before);
-    expect(app.draft.rules[1].when[1].feet).toBe(5);
+    expect(app.draft.rules[VOLLEY].when[1].feet).toBe(5);
     fire(feet, "change");
     expect(feet.value).toBe("5");
     const maxPerTurn = volley.querySelectorAll("input.mb-limit")[0];
     setVal(maxPerTurn, "2", "input");
-    expect(app.draft.rules[1].limits.maxPerTurn).toBe(2);
+    expect(app.draft.rules[VOLLEY].limits.maxPerTurn).toBe(2);
     expect(app.renders).toBe(before);
   });
 });
@@ -268,22 +272,23 @@ describe("rule editing", () => {
   it("adds, moves and deletes rules", async () => {
     await editableCopy();
     await click("+ Add rule");
-    expect(app.draft.rules.map((r) => r.id)).toEqual(["sniper-retreat-and-shoot", "sniper-volley", "new-rule"]);
-    const up = qa("button").filter((b) => b.textContent === "↑ Move up")[2];
+    const last = SNIPER_IDS.length; // index of the new rule
+    expect(app.draft.rules.map((r) => r.id)).toEqual([...SNIPER_IDS, "new-rule"]);
+    const up = qa("button").filter((b) => b.textContent === "↑ Move up")[last];
     up.click();
     await app.render();
-    expect(app.draft.rules.map((r) => r.id)).toEqual(["sniper-retreat-and-shoot", "new-rule", "sniper-volley"]);
-    const del = qa("button").filter((b) => b.textContent === "Delete rule")[1];
+    expect(app.draft.rules.map((r) => r.id)).toEqual([...SNIPER_IDS.slice(0, -1), "new-rule", SNIPER_IDS.at(-1)]);
+    const del = qa("button").filter((b) => b.textContent === "Delete rule")[last - 1];
     del.click();
     await settle();
-    await vi.waitFor(() => expect(app.draft.rules.map((r) => r.id)).toEqual(["sniper-retreat-and-shoot", "sniper-volley"]));
+    await vi.waitFor(() => expect(app.draft.rules.map((r) => r.id)).toEqual(SNIPER_IDS));
   });
   it("declining the confirmation keeps the rule", async () => {
     await editableCopy();
     globalThis.confirm = vi.fn(() => false);
     qa("button").filter((b) => b.textContent === "Delete rule")[0].click();
     await settle();
-    expect(app.draft.rules).toHaveLength(2);
+    expect(app.draft.rules).toHaveLength(SNIPER_IDS.length);
   });
   it("shows rule warnings inline", async () => {
     await editableCopy();
@@ -402,5 +407,36 @@ describe("safety", () => {
     await app.render();
     expect(app.lastRender.querySelector("img")).toBeNull();
     expect(app.lastRender.querySelector(".mb-ruletitle b")).toBeNull();
+  });
+});
+
+describe("the built-in actions in the editor", () => {
+  it("offers every catalog action in groups, with Strike and signature first", async () => {
+    await editableCopy();
+    const select = qa(".mb-rulecard")[0].querySelector(".mb-actionsel");
+    const groups = [...select.querySelectorAll("optgroup")];
+    expect(groups.map((g) => g.label)).toEqual(["Attacks", "Movement", "Dirty tricks", "Morale and nerve", "Defence", "Stealth and senses", "Support"]);
+    expect([...groups[0].querySelectorAll("option")].map((o) => o.value)).toEqual(["melee-strike", "ranged-strike", "signature"]);
+    const values = [...select.options].map((o) => o.value);
+    for (const v of ["trip", "grapple", "shove", "reposition", "disarm", "demoralize", "feint", "create-a-diversion", "raise-a-shield", "take-cover", "step", "escape", "seek", "hide", "sneak", "tumble-through", "aid", "ready", "point-out", "interact", "drop-prone", "crawl", "leap"]) {
+      expect(values, v).toContain(v);
+    }
+    expect(values).toContain("__custom__");
+  });
+  it("picking one stores its slug, shows its tooltip and a rules button", async () => {
+    await editableCopy();
+    const row = () => qa(".mb-rulecard")[0].querySelector(".mb-action");
+    setVal(row().querySelector(".mb-actionsel"), "trip");
+    await app.render();
+    expect(app.draft.rules[0].do[0]).toBe("trip");
+    expect(row().querySelector(".mb-actionsel").title).toMatch(/^Trip \(1 action\)/);
+    expect(row().querySelector(".mb-info").getAttribute("aria-label")).toBe("Rules for Trip");
+  });
+  it("a custom slot has no rules button", async () => {
+    await editableCopy();
+    const row = () => qa(".mb-rulecard")[0].querySelector(".mb-action");
+    setVal(row().querySelector(".mb-actionsel"), "__custom__");
+    await app.render();
+    expect(row().querySelector(".mb-info")).toBeNull();
   });
 });

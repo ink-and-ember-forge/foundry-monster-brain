@@ -47,6 +47,12 @@ Under `message.flags.pf2e` (`chat-message/data.ts`):
 - Current-combatant test: `message.speaker.token === combatant.tokenId`, falling back to `context.token` (a UUID ending in the token id).
 - Movement is not a chat card. Detect via `updateToken` on `x`/`y`.
 
+**Corrections and additions from the v13-dev re-verification** (see "v13 verification" below):
+- **A spell only gets a `context` if it has a `defense`** (a save or attack): `item/spell/document.ts:790`. Every cast, defense or not, carries `flags.pf2e.casting` (set only by `SpellPF2e#toMessage`) and `flags.pf2e.origin`. A buff, heal or summon therefore produces a card with **no** `flags.pf2e.context`. Detection keys off `casting` (`engine/detect.mjs`); it used to ignore these casts entirely.
+- **A spell's attack roll looks like a Strike.** `SpellPF2e#rollAttack` goes through the spellcasting entry's Statistic, whose check type is `"attack-roll"` (`item/spellcasting-entry/document.ts:183`), with no identifier, and `action:cast-a-spell` in its options. It used to be logged as a *Melee strike* on top of the cast (and once per ray for multi-attack spells). It is now ignored, because the cast card already counted the action.
+- **Check cards carry less than the notes above implied.** `system/check/check.ts:283-300`: `context.item` is always `undefined`, `identifier` is `null` when absent, and `actor` / `token` are bare ids (`token?.id`), not UUIDs. The current-combatant test (`speaker.token`, falling back to `context.token.endsWith(tokenId)`) works for both.
+- Not detectable from the card: which spell an *attack roll* was for. Not needed, because only the cast card counts.
+
 ### V4: Flanking (v1.1)
 Available: `token.canFlank(flankee)`, `actor.attributes.flanking.{canFlank, flankable}`. Gated by the PF2e flanking automation setting.
 
@@ -55,6 +61,65 @@ No per-turn action tracking found in PF2e (`encounter/`, `actor/base.ts`). The m
 
 ### New: turn hooks
 PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)` (`encounter/combatant.ts`) after its own turn-start effects run. Prefer these over raw `combatTurn`. Note `onStartTurn` runs per represented actor for troops.
+
+## v13 verification
+
+The module supports v13 and v14 (V1), and the original evidence was all `v14-dev`. Re-checked against `foundryvtt/pf2e` **`v13-dev` @ f38e9796 (2026-04-09), system 7.9.1, Foundry 13.348 to 13.351** by reading the source. (V1's table says `v13-dev` is 7.12.2; the branch tip read here is 7.9.1. One of the two is stale, so re-read the tip before trusting either number.)
+
+**Present and behaving as recorded on v13:** `actor.getReach({ action, weapon })` (`actor/creature/document.ts:93`), `TokenPF2e#distanceTo(target, { reach })` (`canvas/token/object.ts:548`), `actor.conditions.active` and `bySlug`, `condition.value`, `system.movement.speeds` (`land`, `burrow`, `climb`, `fly`, `swim`, `travel`), `actor.alliance` / `isEnemyOf`, `item.range` (`{ increment, max }`) on weapons, NPC melee items and spells, `isMelee` / `isRanged` on all three, spell `range` parsed from text for non-touch spells, the `pf2e.startTurn` / `pf2e.endTurn` hooks, and the strike identifier `${item.id}.${slug}.${melee|ranged}` (`actor/helpers.ts:604`). Area and auto-fire build theirs as `${item.id}.${slug}.${action}` (`actor/helpers.ts:691`).
+
+**Same on v14-dev** (diffed, no relevant change): `getReach`, `movement.speeds`, `distanceTo`, the strike identifier and `chat-message/data.ts` types. `actor/creature/document.ts` and `actor/helpers.ts` have other changes (not read in detail), so re-check before claiming v14 parity for anything not listed here.
+
+**Fixed as a result:** the two spell-detection bugs recorded under V3. Their tests use `tests/fixtures/pf2e-v13-chat.mjs`, cards built from the source with the source line cited beside each field. These are source-derived, not captured from a live game; replace them when a real capture exists.
+
+**Design note, not changed:** the `inReach` flag (used by `enemy-in-reach` and the `in-reach` target preference) calls `getReach({ action: "attack" })` with no weapon, which returns the *largest* reach among the creature's ready attacks (`creature/document.ts:93-120`; it also counts ranged attacks' `reach` traits). The planner, by contrast, uses the reach of the specific bound weapon. For a creature with a 10 ft pike and a 5 ft bite, an enemy at 10 ft is "in reach" for conditions and targeting, while a plan that uses the bite will still add a Stride. That is coherent for "can this creature melee that enemy at all", and wrong only if a rule means "can it use *this* weapon". Left as is; raise it if a live game shows a rule choosing a melee plan it then has to repair.
+
+**Not verifiable from the PF2e source** (needs Foundry core or a live game): whether `ChatMessage.getSpeaker` fills `speaker.token` for a *linked* actor's spell card with several tokens on the scene. Cards with no `context` (buffs) rely on `speaker.token` alone, so this is on the live checklist (section 3).
+
+## Built-in actions and goon behaviour
+
+Asked for after play: fodder with "limited options" felt like "move, Strike, Strike". The fix is a bigger vocabulary and rules that use it, not a smarter engine.
+
+**Scope (decided with the GM).** The combat set, about 25 actions, not all ~90 basic and skill actions (Earn Income, Craft and Treat Wounds would only bury the useful ones in the editor): Stride, Stride away, Step, Stand, Drop prone, Crawl, Leap; Trip, Grapple, Shove, Reposition, Disarm; Demoralize, Feint, Create a Diversion; Raise a Shield, Take Cover, Escape; Hide, Sneak, Tumble Through, Seek, Point Out; Aid, Ready, Interact. Each has a tooltip, a rules popout and a place in the editor and the correction menu. `engine/action-catalog.mjs` is the single source of truth: label, cost, group, one-line summary, what it needs, the PF2e compendium entry, how it relates to distance, and the statistic shown beside it. Built-in actions need no binding, so they never become slots (`cascade.mjs` `BUILTIN_ACTIONS` comes from the catalog).
+
+**PF2e facts verified** (`foundryvtt/pf2e` `v13-dev` @ f38e9796, `packs/pf2e/actions/{basic,skill}/*.json`; `src/module`):
+- Costs: everything is one action except **Ready (two)**; Aid is one action to prepare plus a reaction later. Step needs Speed 10 ft and moves 5 ft without triggering reactions. Demoralize reaches **30 ft**. Feint needs the target within melee reach. Trip, Grapple, Shove, Disarm need a free hand and a target no more than one size larger; Reposition needs a free hand *or* the target already grabbed.
+- **No skill action here needs training**, so nothing checks proficiency (Disarm and Feint are untrained in this version). If a legacy-rules world needs it, that changes.
+- **Take Cover ends when you "use an attack action"**, so a plan that takes cover then attacks defeats itself. Cover always comes last in a bundle (a test enforces it).
+- **Escape rolls the unarmed attack modifier** by default (`action-macros/basic/escape.ts`), so its chat card is an `attack-roll` and used to be logged as a Strike. Detection now recognises `action:escape` there. **Seek is a perception check**, now recognised too. Sneak, Tumble Through, Hide and the skill tricks were already caught by the `action:<slug>` option.
+- **Step, Stand, Take Cover, Drop Prone, Crawl, Leap, Interact and Ready post a card with no flags at all** (`actor/actions/simple.ts:70-78`: just `flavor` and `speaker`). They cannot be auto-detected; record them with "Did this" or the correction menu. A token drag after a Step is still merged, because Step, Leap and Crawl share the movement key `stride` (`engine/actions.mjs`).
+- `actor.getStatistic(slug)` covers every skill and `"perception"` (`creature/document.ts:215-220`), and `.mod` is the total modifier. An NPC has a statistic for **every** skill; one not in its stat block falls back to its attribute modifier (`npc/document.ts:347-383`), so the number shown is always real. `actor.heldShield` is `creature/document.ts:184` (equipped `shield` items).
+
+**What the planner now models** (`engine/world.mjs`): tricks need the target within the creature's *own* reach; Demoralize 30 ft; Step opens 5 ft and needs Speed 10; Tumble Through is a full move that is never skipped as "already adjacent"; Escape only while grabbed, immobilized or restrained (otherwise "Skipped Escape: not grabbed…"), and a later move in the same plan assumes the Escape worked and says so; Crawl only while prone; Drop prone is skipped if already prone and a later move then gets a Stand up; Ready costs two actions and drops anything after it. Posture is replayed in order from what was recorded this turn, so a Drop prone then a Stand up is upright again. **Sneak has no direction** (toward or away is the GM's call), so it changes no distance; modelling it as moving toward the target would have been wrong for a fleeing Coward.
+
+**Turn budget counts cost, not records** (`turnCost`): a recorded Ready spends two. Pips and "actions left" follow.
+
+**"Can it actually do this?" (decided with the GM): the cheap things only.** Raise a Shield is held back on a creature with no shield in hand ("needs a shield"). Free hands, size and nearby cover are *reminders* in the tooltip, not checks. When the adapter cannot tell (`hasShield` undefined) the rule stands. The skill modifier appears beside the step ("Athletics +7").
+
+**Rules popout** (`scripts/rules.mjs`): the "?" button opens PF2e's own entry from its `pf2e.actionspf2e` pack, found by name (`matchEntry`, case-insensitive), so the text is always the installed system's. If the pack or entry is missing (a translated or renamed entry) it shows the catalog's one-line summary instead, so the button never does nothing. The tooltip text is our own short wording and ends by pointing at the button. **Not yet seen in Foundry:** `pack.getIndex()`, `getDocument()`, `sheet.render({ force: true })`, `DialogV2.prompt`.
+
+**Variety (decided with the GM): rotation by cooldowns only.** Deterministic and explainable; no randomness, no per-token quirk (that was offered and declined for now). A trick has a cooldown, so a creature alternates; a mob drifts out of step through position and target.
+
+**Tricks set tricks up, using the existing vocabulary.** Trip leaves a creature prone and Grapple leaves it grabbed; a trick rule asks for a target that is *not* already prone (`enemy-has-condition prone`, negated) and a pile-on rule asks for one that is. The next goon exploits what the last one did with no new condition. **This only works if the condition is on the token.** The module reads conditions, not roll results: a failed Trip leaves the target standing and a successful one only helps if the GM (or PF2e's roll card button) applies *prone*. Say so at the table.
+
+**Template changes** (ids and what each rotates; every rule still names its own target):
+| Template | New behaviour |
+|---|---|
+| Brawler | Brace first when hurt (needs a shield), power attack (cd 2), grab a caster (cd 3), trip the toughest standing foe (cd 2); smash and charge as before |
+| Berserker | Battle cry once as it closes in (Demoralize, which closes to 30 ft first); no change to frenzy |
+| Duelist | Real **Feint** replaces the signature-based one (no `signature` slot any more), Disarm the best-armed foe (cd 3), Guard when hurt (needs a shield) |
+| Skirmisher | Tumble past the front line (cd 2), taunt then dart in (cd 3) |
+| Ambusher | Lie in wait (Hide, Ready) while the party is beyond 60 ft in rounds 1 to 2, Create a Diversion (cd 3), go to ground when hurt (Hide, Sneak) |
+| Sniper | Sidestep with a Step when the long retreat is cooling down, shoot twice then take cover when hurt |
+| Spellslinger, Hexer | Step (not Stride away) before casting, since a Step provokes nothing; take cover after casting when hurt; Spellslinger runs properly when hurt |
+| Coward | Create a Diversion then Sneak away once when hurt, then Flee as before |
+| Swarmer | Becomes the rank-and-file goon: trip (cd 2), grab (cd 3), jeer (Demoralize, cd 3), back up an ally (Step, Aid) when hurt, pile onto the prone or the grabbed; still rushes the nearest and **ignores HP** (its tricks prefer the nearest, with soft targets first when roles are tagged). The old "mindless, no tactics" description is gone. |
+
+**Shipped defaults added:** `break-free-grabbed` and `break-free-restrained` (`priority` -20 and -10, so they outrank every template rule; one action, `escape`; the rest of the turn goes to the next rule once it is recorded). **Immobilized** is the third condition Escape frees and has no default rule (one condition per rule, and it is rare). `seek-the-hidden` ranks just above the fallback, so it only fires when nothing nearer applies; it cannot know whether a *visible* enemy exists, so ranking it higher would waste turns searching while a PC stands in plain sight.
+
+**In the library but in no starter rule:** Shove, Reposition, Point Out, Interact, Leap, Crawl and Drop prone. They are there for your own rules and the correction menu. Drop prone and Crawl are the obvious cover-from-ranged-fire pair if you want a goon to "hit the dirt".
+
+**Known gaps:** a trick's *result* is not read (above). The detection blind spot for flag-less actions (above). Aid names no ally: the module has no allies in its context (that needs the "allies" condition, out of v1 scope), so the card says to choose one. Whether an NPC's stat-block shield is a `shield` item (so `heldShield` sees it) has not been checked against real bestiary actors; if it wrongly says "no shield" for a creature that has one, the Raise a Shield rule is held back with that reason and the GM can edit it.
 
 ## Decided
 
@@ -114,6 +179,7 @@ PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)
 | 7. Expanded card, why / held back | **Done** (DOM smoke-tested with jsdom; not yet seen in Foundry). |
 | 8. Starter templates, dry-run | **Done** (console API; pure parts tested, Foundry glue untested live). |
 | 8. Form editor | **Done:** per-token configure dialog, role tagging, template and rule editor (conditions, actions, targets, limits, hints, shipped-rule switches) and a campaign policies tab. Not in the UI: custom rules for a single token or actor (only via the templates they use), editing policy defaults beyond the repeat cap, import/export. |
+| 9. Built-in actions, rules popout, goon templates | **Done** (engine, planner, tests, UI; popout and the NPC shield check untested live). See "Built-in actions and goon behaviour". |
 
 Known gaps: the adapter, tracker and panel (`scripts/adapter.mjs`, `tracker.mjs`, `panel.mjs`) are untested outside Foundry; spells always cost one tracked action (3-action spells and metamagic are not modelled; correct via the log); a Strike made as a reaction on the monster's own turn is indistinguishable and counts; action slots are shown as plain labels (no binding to real items).
 

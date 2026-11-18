@@ -13,8 +13,9 @@ import {
   nextIndex,
   alternativeOf,
 } from "./engine/suggestion.mjs";
-import { actionLabel, MANUAL_ACTION_KEYS } from "./engine/actions.mjs";
+import { actionLabel, manualActionGroups } from "./engine/actions.mjs";
 import { el, button } from "./dom.mjs";
+import { infoButton, tooltipFor } from "./action-ui.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -124,7 +125,9 @@ export class MonsterBrainStrip extends ApplicationV2 {
     row.append(el("strong", { text: this.combatant?.name ?? "" }));
     const parts = turn.remaining > 0 ? stripParts(shown) : null;
     if (parts) {
-      row.append(document.createTextNode(" "), el("span", { cls: "mb-marker", text: "\u25B6" }), document.createTextNode(" "), el("strong", { cls: "mb-current", text: parts.current }));
+      row.append(document.createTextNode(" "), el("span", { cls: "mb-marker", text: "\u25B6" }), document.createTextNode(" "), el("strong", { cls: "mb-current", text: parts.current, title: tooltipFor(parts.currentSlug) }));
+      const rules = parts.currentSlug ? infoButton(parts.currentSlug) : null;
+      if (rules) row.append(document.createTextNode(" "), rules);
       if (parts.target) row.append(el("span", { cls: "mb-target-text", text: ` \u2192 ${parts.target}` }), el("span", { cls: "mb-meta", text: ` (${distanceText(shown, true)})` }));
       if (parts.then) row.append(el("span", { cls: "mb-then", text: `  then ${parts.then}` }));
     } else {
@@ -162,7 +165,9 @@ export class MonsterBrainStrip extends ApplicationV2 {
       for (const row of stepRows(shown)) {
         const li = el("li", { cls: ["mb-step", `mb-${row.state}`, row.added ? "mb-added" : ""].filter(Boolean) });
         if (row.state === "current") li.setAttribute("aria-current", "step");
-        li.append(el("span", { cls: "mb-stepmark", text: row.state === "current" ? "\u25B6" : `${row.index}.` }), document.createTextNode(" "), el("span", { cls: "mb-steplabel", text: row.label }));
+        li.append(el("span", { cls: "mb-stepmark", text: row.state === "current" ? "\u25B6" : `${row.index}.` }), document.createTextNode(" "), el("span", { cls: "mb-steplabel", text: row.label, title: tooltipFor(row.slug) }));
+        const rules = row.slug ? infoButton(row.slug) : null;
+        if (rules) li.append(document.createTextNode(" "), rules);
         if (row.state === "current" && row.index !== 1) li.append(el("span", { cls: "mb-meta", text: ` (step ${row.index})` }));
         if (row.added) li.append(el("span", { cls: "mb-meta", text: " (added)" }));
         if (row.note) li.append(el("span", { cls: "mb-meta", text: ` \u2014 ${row.note}` }));
@@ -201,7 +206,12 @@ export class MonsterBrainStrip extends ApplicationV2 {
     }
     const add = el("select", { cls: "mb-add" });
     add.append(new Option("+ add action", ""));
-    for (const key of MANUAL_ACTION_KEYS) add.append(new Option(actionLabel(key), key));
+    for (const group of manualActionGroups()) {
+      const og = document.createElement("optgroup");
+      og.label = group.label;
+      for (const key of group.keys) og.append(new Option(actionLabel(key), key));
+      add.append(og);
+    }
     add.addEventListener("change", () => add.value && this.handlers.onAdd(add.value));
     log.append(add);
     card.append(log);

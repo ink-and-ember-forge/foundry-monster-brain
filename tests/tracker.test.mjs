@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { emptyHistory, isDuplicateMovement, markMerged, addAction, turnActions, ruleUsesFor } from "../scripts/engine/history.mjs";
+import { spellCastCard, spellAttackRollCard, strikeAttackCard } from "./fixtures/pf2e-v13-chat.mjs";
 
 let flag;
 let n = 0;
@@ -239,5 +240,37 @@ describe("a detected roll is recorded as the plan step it fulfilled (the reporte
     await onCreateChatMessage(chat({ type: "damage-roll", identifier: "bow.shortbow.ranged" }));
     await onCreateChatMessage({ speaker: { token: "someone-else" }, flags: { pf2e: { context: { type: "attack-roll", identifier: "bow.x.ranged", token: "Scene.s.Token.zzz" } } } });
     expect(flag).toEqual(emptyHistory());
+  });
+});
+
+describe("spells as PF2e really sends them (source-derived fixtures, v13-dev)", () => {
+  it("casting a spell with no save or attack (a buff) is one Spell, though its card has no context", async () => {
+    await onCreateChatMessage(spellCastCard({ item: "haste", withDefense: false }));
+    expect(keys()).toEqual(["spell:auto"]);
+  });
+  it("casting an attack spell is ONE action: the cast card counts, the attack roll after it does not", async () => {
+    await onCreateChatMessage(spellCastCard({ item: "fire", withDefense: true }));
+    await onCreateChatMessage(spellAttackRollCard());
+    expect(keys()).toEqual(["spell:auto"]);
+  });
+  it("a second attack roll from the same cast (e.g. a multi-ray spell) is still not a Strike", async () => {
+    await onCreateChatMessage(spellCastCard({ item: "rays", withDefense: true }));
+    await onCreateChatMessage(spellAttackRollCard());
+    await onCreateChatMessage(spellAttackRollCard());
+    expect(keys()).toEqual(["spell:auto"]);
+  });
+  it("a spell cast is matched to its slot even with no context on the card", async () => {
+    bound = { signature: { itemId: "haste", label: "Haste", auto: false } };
+    await onCreateChatMessage(spellCastCard({ item: "haste", withDefense: false }));
+    expect(mine()[0]).toMatchObject({ slug: "signature", label: "Signature action (Haste)" });
+  });
+  it("a spell cast on someone else's turn is ignored, context or not", async () => {
+    await onCreateChatMessage(spellCastCard({ item: "haste", withDefense: false, token: "someone-else" }));
+    expect(flag).toEqual(emptyHistory());
+  });
+  it("Strikes from the same fixtures are still counted once each", async () => {
+    await onCreateChatMessage(strikeAttackCard({ item: "claw9", kind: "melee" }));
+    await onCreateChatMessage(strikeAttackCard({ item: "bow", slug: "shortbow", kind: "ranged" }));
+    expect(keys()).toEqual(["melee-strike:auto", "ranged-strike:auto"]);
   });
 });

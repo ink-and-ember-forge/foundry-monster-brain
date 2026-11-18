@@ -1,4 +1,5 @@
 import { actionBudget } from "./engine/budget.mjs";
+import { turnCost } from "./engine/action-catalog.mjs";
 import { turnActions, ruleUsesFor } from "./engine/history.mjs";
 import { rolesFor, getActorRoles } from "./roles.mjs";
 
@@ -59,8 +60,29 @@ export function selfStats(actor) {
   } catch {
     /* unknown reach */
   }
-  return { speed, reach };
+  // Raise a Shield needs one in hand. `heldShield` is PF2e's own (actor/creature/document.ts); undefined = unknown.
+  let hasShield;
+  try {
+    if ("heldShield" in actor) hasShield = !!actor.heldShield;
+  } catch {
+    /* unknown */
+  }
+  // Modifiers shown beside the skill actions. getStatistic covers every skill and "perception"; an unlisted skill on
+  // an NPC falls back to its attribute modifier, so each of these is always a real number for a creature.
+  const skills = {};
+  for (const slug of SKILL_SLUGS) {
+    try {
+      const mod = actor.getStatistic?.(slug)?.mod;
+      if (Number.isFinite(mod)) skills[slug] = mod;
+    } catch {
+      /* unknown */
+    }
+  }
+  return { speed, reach, ...(hasShield === undefined ? {} : { hasShield }), ...(Object.keys(skills).length ? { skills } : {}) };
 }
+
+/** The statistics the built-in skill actions use (action-catalog.mjs `skills`). */
+const SKILL_SLUGS = ["athletics", "acrobatics", "intimidation", "deception", "stealth", "perception"];
 
 /** Condition slug to badge value (1 when the condition has no badge). */
 function conditionValues(actor) {
@@ -100,7 +122,7 @@ export function buildContext(combatant, combat, history) {
     round: combat.round,
     self: { name: combatant.name, hpPercent: hpPercent(actor), conditions: conditionSlugs(actor), ...selfStats(actor) },
     enemies,
-    turn: { budget, remaining: Math.max(0, budget - taken.length), taken },
+    turn: { budget, remaining: Math.max(0, budget - turnCost(taken)), taken },
     ruleUses: ruleUsesFor(history, combatant.id),
   };
 }
