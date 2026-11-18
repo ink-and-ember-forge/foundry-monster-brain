@@ -74,7 +74,7 @@ describe("collapsed strip", () => {
     expect(root.querySelector(".mb-current").textContent).toBe("Stride");
     expect(root.querySelector(".mb-target-text").textContent).toBe(" → Mira");
     expect(root.querySelector(".mb-then").textContent).toContain("then Melee strike (Claw)");
-    expect(root.textContent).toContain("Goblin ▶ Stride → Mira");
+    expect(root.textContent).toContain("Goblin ▶ Stride ? → Mira"); // the "?" opens the rules for the current action
     expect(root.querySelector(".mb-pips").textContent).toBe("●●○");
   });
   it("shows how far the target is, so a wrong measurement is visible", async () => {
@@ -224,5 +224,47 @@ describe("expanded card", () => {
   it("renders text safely (no HTML injection from names or labels)", async () => {
     const app = await open(makeView({ suggestions: [suggestion("a", "<img src=x onerror=alert(1)>")] }), handlers(), true);
     expect(app.lastRender.querySelector("img")).toBeNull();
+  });
+});
+
+describe("rules help for the built-in actions", () => {
+  const withSteps = (steps) => makeView({ suggestions: [suggestion("a", "Dirty fighting", { steps, slugs: steps.map((s) => s.slug), actions: steps.map((s) => s.label) })] });
+  const TRIP_PLAN = [
+    { slug: "trip", label: "Trip", note: "Athletics +7", added: false },
+    { slug: "melee-strike", label: "Melee strike (Claw)", note: "", added: false },
+    { slug: "flaming-arrow", label: "Flaming arrow", note: "", added: false },
+  ];
+
+  it("the strip's current action has a tooltip and a ? button that names the action", async () => {
+    const app = await open(withSteps(TRIP_PLAN), handlers(), false);
+    const root = app.lastRender;
+    expect(root.querySelector(".mb-current").title).toMatch(/^Trip \(1 action\)\n.*Athletics vs Reflex DC/s);
+    const info = root.querySelector(".mb-info");
+    expect(info.getAttribute("aria-label")).toBe("Rules for Trip");
+    expect(info.title).toMatch(/Needs: a free hand/);
+  });
+  it("every plan step that has rules gets a ? button; a custom slot does not", async () => {
+    const app = await open(withSteps(TRIP_PLAN), handlers(), true);
+    const rows = [...app.lastRender.querySelectorAll(".mb-step")];
+    expect(rows.map((li) => li.querySelector(".mb-info")?.getAttribute("aria-label") ?? null)).toEqual(["Rules for Trip", "Rules for Melee strike", null]);
+    expect(rows[0].querySelector(".mb-steplabel").title).toMatch(/Trip/);
+    expect(rows[2].querySelector(".mb-steplabel").title).toBe("");
+  });
+  it("the skill modifier the planner found is shown with the step", async () => {
+    const app = await open(withSteps(TRIP_PLAN), handlers(), true);
+    expect(app.lastRender.querySelector(".mb-step").textContent).toContain("Athletics +7");
+  });
+  it("the correction menu offers the new actions in groups, and adding one calls the handler", async () => {
+    const h = handlers();
+    const app = await open(makeView(), h, true);
+    const select = app.lastRender.querySelector(".mb-add");
+    expect([...select.querySelectorAll("optgroup")].map((g) => g.label)).toEqual(
+      expect.arrayContaining(["Attacks", "Movement", "Dirty tricks", "Morale and nerve", "Defence", "Stealth and senses", "Support"]),
+    );
+    const options = [...select.options].map((o) => o.value);
+    for (const key of ["trip", "demoralize", "escape", "raise-a-shield", "step", "ready"]) expect(options, key).toContain(key);
+    select.value = "demoralize";
+    select.dispatchEvent(new Event("change"));
+    expect(h.onAdd).toHaveBeenCalledWith("demoralize");
   });
 });

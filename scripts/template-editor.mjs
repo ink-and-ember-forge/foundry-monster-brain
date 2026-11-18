@@ -9,7 +9,8 @@
  */
 import { MODULE_ID } from "./constants.mjs";
 import { el, button, confirmDialog } from "./dom.mjs";
-import { CONDITION_SCHEMA, CONDITION_SLUGS, ACTION_CHOICES, TARGET_CHOICES, LIMIT_FIELDS } from "./engine/schema.mjs";
+import { CONDITION_SCHEMA, CONDITION_SLUGS, ACTION_CHOICES, ACTION_CHOICE_GROUPS, TARGET_CHOICES, LIMIT_FIELDS } from "./engine/schema.mjs";
+import { infoButton, tooltipFor } from "./action-ui.mjs";
 import * as D from "./engine/rule-draft.mjs";
 import { SYSTEM_LAYER, DEFAULT_POLICIES } from "./engine/default-rules.mjs";
 import { listTemplates, templateById, setTemplate, deleteTemplate, getCampaign, setCampaign } from "./profiles.mjs";
@@ -498,11 +499,19 @@ export class MonsterBrainEditor extends ApplicationV2 {
     const row = el("div", { cls: "mb-row mb-action" });
     const known = actionKnown(slug);
     const sel = el("select", { cls: "mb-actionsel" });
-    for (const [v, label] of ACTION_CHOICES) sel.append(new Option(label, v));
+    for (const group of ACTION_CHOICE_GROUPS) {
+      const og = document.createElement("optgroup");
+      og.label = group.label;
+      for (const [v, label] of group.choices) og.append(new Option(label, v));
+      sel.append(og);
+    }
     sel.append(new Option("Custom slot…", CUSTOM));
     sel.value = known ? slug : CUSTOM;
+    if (known && tooltipFor(slug)) sel.title = tooltipFor(slug);
     sel.addEventListener("change", () => edit((r) => D.setAction(r, j, sel.value === CUSTOM ? "custom-slot" : sel.value)));
     row.append(sel);
+    const rules = known ? infoButton(slug) : null;
+    if (rules) row.append(rules);
     if (!known) {
       const input = this.#textInput(slug, () => {}, { cls: "mb-customslot", placeholder: "slot name, e.g. flaming-arrow" });
       // Applied on blur/Enter, not per keystroke, so spaces and hyphens can be typed; no re-render.

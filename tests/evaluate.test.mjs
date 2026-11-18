@@ -254,7 +254,7 @@ describe("plan display helpers", () => {
     expect(rows[0]).toMatchObject({ label: "Stride", note: "to 5 ft from Mira", added: true });
   });
   it("splits the strip into what to do now, the target and what follows", () => {
-    expect(stripParts(sug)).toEqual({ current: "Stride", target: "Mira", then: "Melee strike (Claw), Melee strike (Claw)" });
+    expect(stripParts(sug)).toEqual({ current: "Stride", currentSlug: null, target: "Mira", then: "Melee strike (Claw), Melee strike (Claw)" });
     expect(stripParts({ ...sug, steps: sug.steps.slice(0, 1) })).toMatchObject({ current: "Stride", then: "" });
   });
   it("falls back to the plain action list when there are no steps", () => {

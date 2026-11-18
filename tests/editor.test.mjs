@@ -404,3 +404,34 @@ describe("safety", () => {
     expect(app.lastRender.querySelector(".mb-ruletitle b")).toBeNull();
   });
 });
+
+describe("the built-in actions in the editor", () => {
+  it("offers every catalog action in groups, with Strike and signature first", async () => {
+    await editableCopy();
+    const select = qa(".mb-rulecard")[0].querySelector(".mb-actionsel");
+    const groups = [...select.querySelectorAll("optgroup")];
+    expect(groups.map((g) => g.label)).toEqual(["Attacks", "Movement", "Dirty tricks", "Morale and nerve", "Defence", "Stealth and senses", "Support"]);
+    expect([...groups[0].querySelectorAll("option")].map((o) => o.value)).toEqual(["melee-strike", "ranged-strike", "signature"]);
+    const values = [...select.options].map((o) => o.value);
+    for (const v of ["trip", "grapple", "shove", "reposition", "disarm", "demoralize", "feint", "create-a-diversion", "raise-a-shield", "take-cover", "step", "escape", "seek", "hide", "sneak", "tumble-through", "aid", "ready", "point-out", "interact", "drop-prone", "crawl", "leap"]) {
+      expect(values, v).toContain(v);
+    }
+    expect(values).toContain("__custom__");
+  });
+  it("picking one stores its slug, shows its tooltip and a rules button", async () => {
+    await editableCopy();
+    const row = () => qa(".mb-rulecard")[0].querySelector(".mb-action");
+    setVal(row().querySelector(".mb-actionsel"), "trip");
+    await app.render();
+    expect(app.draft.rules[0].do[0]).toBe("trip");
+    expect(row().querySelector(".mb-actionsel").title).toMatch(/^Trip \(1 action\)/);
+    expect(row().querySelector(".mb-info").getAttribute("aria-label")).toBe("Rules for Trip");
+  });
+  it("a custom slot has no rules button", async () => {
+    await editableCopy();
+    const row = () => qa(".mb-rulecard")[0].querySelector(".mb-action");
+    setVal(row().querySelector(".mb-actionsel"), "__custom__");
+    await app.render();
+    expect(row().querySelector(".mb-info")).toBeNull();
+  });
+});

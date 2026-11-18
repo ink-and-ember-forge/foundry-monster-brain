@@ -60,14 +60,14 @@ export function alternativeOf(suggestions, index) {
 export function stepRows(suggestion) {
   if (!suggestion) return [];
   const steps = suggestion.steps?.length ? suggestion.steps : (suggestion.actions ?? []).map((label) => ({ label, note: "", added: false }));
-  return steps.map((st, i) => ({ index: i + 1, label: st.label, note: st.note ?? "", added: !!st.added, state: i === 0 ? "current" : "next" }));
+  return steps.map((st, i) => ({ index: i + 1, slug: st.slug ?? null, label: st.label, note: st.note ?? "", added: !!st.added, state: i === 0 ? "current" : "next" }));
 }
 
 /** Parts of the one-line strip: the action to do now, the target, and what follows. */
 export function stripParts(suggestion) {
   const rows = stepRows(suggestion);
   if (!rows.length) return null;
-  return { current: rows[0].label, target: suggestion.target ?? null, then: rows.slice(1).map((r) => r.label).join(", ") };
+  return { current: rows[0].label, currentSlug: rows[0].slug, target: suggestion.target ?? null, then: rows.slice(1).map((r) => r.label).join(", ") };
 }
 
 /** Adjustments the planner made, as lines for the card and the "why" text. */
