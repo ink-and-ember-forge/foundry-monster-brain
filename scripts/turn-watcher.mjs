@@ -6,6 +6,7 @@ import { isMonsterAlliance } from "./engine/suggestion.mjs";
 import { turnActions } from "./engine/history.mjs";
 import { readHistory, panelHandlers, noteExpected } from "./tracker.mjs";
 import { resolveFor } from "./profiles.mjs";
+import { settleAnimations } from "./animation.mjs";
 
 /** Everything the pipeline produces for a combatant right now. Also backs the console `explain` API. */
 export function compute(combat, combatant) {
@@ -26,6 +27,14 @@ export function compute(combat, combatant) {
 export async function refresh(combat, combatant = combat?.combatant) {
   if (!combatant?.actor || !isMonsterAlliance(combatant.actor.alliance)) {
     return MonsterBrainStrip.hide();
+  }
+  // Measure only once every token has finished moving: a dragged token is still on its way when this runs, so the
+  // distance would be the old one and the plan would add a Stride that is not needed (see animation.mjs).
+  const waited = await settleAnimations(combat.combatants.map((c) => c.token?.object).filter(Boolean));
+  if (waited > 0) {
+    console.debug(`${MODULE_ID} | waited for ${waited} token animation(s) before measuring`);
+    // The turn may have moved on while we waited; a stale strip must not reappear after pf2e.endTurn hid it.
+    if (combat.combatant?.id !== combatant.id) return;
   }
   const { history, ctx, result, warnings, templateName } = compute(combat, combatant);
   console.debug(`${MODULE_ID} | ${combatant.name} r${combat.round}`, { ctx, ...result, warnings });
