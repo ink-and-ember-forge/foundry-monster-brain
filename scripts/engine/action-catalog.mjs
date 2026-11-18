@@ -20,7 +20,7 @@
  * `use.kind`:
  *   "melee"        the target must be within the creature's reach        (Trip, Grapple, Shove, ...)
  *   "within"       the target must be within `feet`                      (Demoralize: 30 ft)
- *   "move-toward"  closes distance by Speed (or `fraction` of it)       (Stride, Tumble Through, Sneak)
+ *   "move-toward"  closes distance by Speed (or `fraction` of it)       (Stride, Tumble Through)
  *   "move-away"    opens distance by Speed                              (Stride away)
  *   "step"         opens distance by 5 ft, Speed 10 ft or more needed    (Step)
  *   "stand" | "drop-prone" | "free"
@@ -235,7 +235,8 @@ export const ACTIONS = {
     summary: "Stride up to half your Speed while hidden or undetected. Stealth is checked at the end of the move.",
     needs: ["hidden or undetected to start: you judge this"],
     skills: ["stealth"],
-    use: { kind: "move-toward", fraction: 0.5, noSkip: true },
+    // No direction: a Sneak may be toward a target or away from one, so the planner models no distance change.
+    use: { kind: "free" },
   },
   "tumble-through": {
     label: "Tumble through",

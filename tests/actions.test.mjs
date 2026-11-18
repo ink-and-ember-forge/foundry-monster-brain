@@ -200,9 +200,10 @@ describe("planning the new actions", () => {
     expect(slugs(plan(["trip", "ready"]))).toEqual(["trip", "ready"]);
     expect(slugs(plan(["trip", "trip", "ready"]))).toEqual(["trip", "trip"]);
   });
-  it("Sneak moves half a Speed and is never skipped, even when adjacent", () => {
-    const p = plan(["sneak"], { distance: 40, self: { speed: 30 } });
-    expect(p.steps[0]).toMatchObject({ slug: "sneak", note: "to 25 ft from Mira" });
+  it("Sneak has no direction, so it changes no distance and is never skipped", () => {
+    const far = plan(["sneak", "ranged-strike"], { distance: 40 });
+    expect(slugs(far)).toEqual(["sneak", "ranged-strike"]);
+    expect(far.finalDistance).toBe(40);
     expect(slugs(plan(["sneak"], { distance: 5 }))).toEqual(["sneak"]);
   });
   it("Tumble Through is a full move and is never skipped", () => {
@@ -221,7 +222,8 @@ describe("planning the new actions", () => {
   it("requirements are read from the catalog", () => {
     expect(requirementFor("trip", {}, { reach: 10 })).toEqual({ type: "melee", reach: 10 });
     expect(requirementFor("demoralize")).toEqual({ type: "ranged", range: 30 });
-    expect(requirementFor("sneak")).toEqual({ type: "move-toward", fraction: 0.5, noSkip: true });
+    expect(requirementFor("sneak")).toEqual({ type: "free" });
+    expect(requirementFor("tumble-through")).toEqual({ type: "move-toward", noSkip: true });
     expect(requirementFor("raise-a-shield")).toEqual({ type: "free" });
     expect(requirementFor("stride")).toEqual({ type: "move-toward" });
   });

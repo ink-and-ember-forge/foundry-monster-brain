@@ -64,11 +64,13 @@ describe("installStarterTemplates", () => {
     expect(store.templates.sniper.name).toBe("Sniper");
   });
   it("installs a deep copy, not the shipped object", async () => {
+    const { STARTER_TEMPLATES } = await import("../scripts/engine/starter-templates.mjs");
+    const shipped = STARTER_TEMPLATES.brawler.rules[0].label;
     await installStarterTemplates(["brawler"]);
     store.templates.brawler.rules[0].label = "edited";
     expect(templateById("brawler").rules[0].label).toBe("edited");
-    const { STARTER_TEMPLATES } = await import("../scripts/engine/starter-templates.mjs");
-    expect(STARTER_TEMPLATES.brawler.rules[0].label).toBe("Power attack");
+    expect(STARTER_TEMPLATES.brawler.rules[0].label).toBe(shipped);
+    expect(shipped).not.toBe("edited");
   });
   it("installs every starter when no ids are given", async () => {
     expect(await installStarterTemplates()).toHaveLength(10);

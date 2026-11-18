@@ -100,27 +100,52 @@ describe("choosing a target the plan can be carried out against", () => {
 
 /**
  * An independent checker: replay a suggestion's steps from scratch and confirm no action is
- * impossible. Deliberately re-implements the rules instead of calling the planner.
+ * impossible. Deliberately re-implements the rules instead of calling the planner, and instead of reading the
+ * action catalog: what each action needs is written out here from the PF2e rules text.
  */
+const HELD = ["grabbed", "immobilized", "restrained"];
+const HARD_STOPS = ["paralyzed", "petrified", "unconscious", "dying"];
+const MOVES = ["stride", "stride-away", "tumble-through", "step"];
+const TRICKS = ["trip", "grapple", "shove", "reposition", "disarm", "feint"]; // within the creature's own reach
+const costOf = (slug) => (slug === "ready" ? 2 : 1);
+
 function replay(suggestion, ctx) {
   const enemy = ctx.enemies.find((x) => x.name === suggestion.target);
   const speed = ctx.self.speed ?? 25;
   const bound = ctx.slots?.bound ?? {};
+  const ownReach = ctx.self.reach ?? 5;
   let d = enemy.distance;
   let prone = ctx.self.conditions.includes("prone");
-  const cannotMove = ctx.self.conditions.some((c) => ["grabbed", "immobilized", "restrained", "paralyzed", "petrified", "unconscious", "dying"].includes(c));
+  let held = ctx.self.conditions.some((c) => HELD.includes(c));
+  const stopped = ctx.self.conditions.some((c) => HARD_STOPS.includes(c));
   const problems = [];
+  const lastIndex = suggestion.steps.length - 1;
   suggestion.steps.forEach((st, i) => {
     const b = bound[st.slug];
     const kind = st.slug === "melee-strike" ? "melee" : st.slug === "ranged-strike" ? "ranged" : b?.kind === "melee" ? "melee" : b?.kind === "ranged" || (b?.kind === "other" && b.range != null) ? "ranged" : null;
-    if (st.slug === "stride" || st.slug === "stride-away") {
-      if (cannotMove) problems.push(`step ${i}: moves while unable to`);
-      if (prone && st.slug !== "stand") problems.push(`step ${i}: moves while prone`);
-      if (d != null) d = st.slug === "stride" ? Math.max(5, d - speed) : d + speed;
+    if (MOVES.includes(st.slug)) {
+      if (stopped || held) problems.push(`step ${i}: moves while unable to`);
+      if (prone) problems.push(`step ${i}: moves while prone`);
+      if (st.slug === "step" && speed < 10) problems.push(`step ${i}: Steps with Speed under 10`);
+      if (d != null) d = st.slug === "stride" || st.slug === "tumble-through" ? Math.max(5, d - speed) : st.slug === "stride-away" ? d + speed : d + 5;
     } else if (st.slug === "stand") {
       prone = false;
+    } else if (st.slug === "drop-prone") {
+      if (prone) problems.push(`step ${i}: drops prone while prone`);
+      prone = true;
+    } else if (st.slug === "crawl") {
+      if (!prone) problems.push(`step ${i}: crawls while not prone`);
+    } else if (st.slug === "escape") {
+      if (!held) problems.push(`step ${i}: escapes while nothing holds it`);
+      held = false; // later moves assume it worked, and the plan says so
+    } else if (st.slug === "ready") {
+      if (i !== lastIndex) problems.push(`step ${i}: something follows Ready, which ends the turn`);
+    } else if (TRICKS.includes(st.slug) && d != null) {
+      if (d > ownReach) problems.push(`step ${i}: ${st.slug} from ${d} ft with reach ${ownReach}`);
+    } else if (st.slug === "demoralize" && d != null) {
+      if (d > 30) problems.push(`step ${i}: demoralize from ${d} ft`);
     } else if (kind === "melee" && d != null) {
-      const reach = b?.reach ?? ctx.self.reach ?? 5;
+      const reach = b?.reach ?? ownReach;
       if (d > reach) problems.push(`step ${i}: melee from ${d} ft with reach ${reach}`);
     } else if (kind === "ranged" && d != null) {
       const range = b?.range ?? null;
@@ -128,7 +153,7 @@ function replay(suggestion, ctx) {
     }
   });
   // Movement while prone must be preceded by Stand. (Strikes may be made prone.)
-  const firstMove = suggestion.steps.findIndex((s) => s.slug === "stride" || s.slug === "stride-away");
+  const firstMove = suggestion.steps.findIndex((s) => MOVES.includes(s.slug));
   const stand = suggestion.steps.findIndex((s) => s.slug === "stand");
   if (ctx.self.conditions.includes("prone") && firstMove >= 0 && (stand < 0 || stand > firstMove)) problems.push("moves before standing");
   return problems;
@@ -159,7 +184,7 @@ describe("no suggested plan is ever impossible (independent replay)", () => {
                 const r = run(id, { items, enemies, self, round, turn: { remaining, taken: [] } });
                 for (const s of r.suggestions) {
                   expect(replay(s, r.ctx), `${s.id}: ${s.slugs.join(",")}`).toEqual([]);
-                  expect(s.slugs.length).toBeLessThanOrEqual(remaining);
+                  expect(s.slugs.reduce((n, x) => n + costOf(x), 0)).toBeLessThanOrEqual(remaining);
                   expect(s.steps.map((x) => x.slug)).toEqual(s.slugs);
                   checked++;
                 }

@@ -22,8 +22,20 @@ Each rule is a list of actions (e.g. *signature, melee Strike*). Before suggesti
 
 - A **melee Strike** needs the target within that weapon's reach; a **ranged** one needs it within range. What `signature` needs depends on what you bound it to (a melee attack, a ranged attack, a spell with a range…), so bind it to the right item.
 - If the target is too far away, the plan **adds the Strides it needs** and says so ("Added Stride: Mira is 30 ft away"). A Stride that isn't needed is skipped. If the gap is too big to close and still attack this turn, it closes in and stops.
+- Tricks need the target in reach (Trip, Grapple, Shove, Feint…) or within 30 ft (Demoralize); the plan adds the Strides to get there. Escape is only planned for a creature that is held, Raise a Shield only for one with a shield, and Ready costs two actions.
 - A creature that is **grabbed, restrained or immobilized** can't Stride; a **prone** one stands up first; a **paralyzed or unconscious** one can't act. Rules that can't be done are held back with the exact reason, and a rule's next-best target is tried before giving up on it.
 - The strip shows the whole turn with the **action to do now highlighted**. **Did this** records that one action and moves on to the next; **Took whole plan** records everything.
+
+## Built-in actions
+
+Rules aren't limited to Strike and Stride. The editor and the correction menu offer PF2e's combat actions in groups: **Movement** (Stride, Step, Stand up, Drop prone, Crawl, Leap), **Dirty tricks** (Trip, Grapple, Shove, Reposition, Disarm), **Morale and nerve** (Demoralize, Feint, Create a diversion), **Defence** (Raise a shield, Take cover, Escape), **Stealth and senses** (Hide, Sneak, Tumble through, Seek, Point out) and **Support** (Aid, Ready, Interact). They need nothing bound to the creature.
+
+- **Hover** an action for its cost, a one-line rule and what it needs (a free hand, a shield, cover).
+- Click the small **?** beside it to open PF2e's own rules entry for that action, from the system's actions compendium, so you read the text for the version you run. If that entry can't be found you get a one-line summary instead.
+- Skill actions show the creature's modifier beside the step ("Athletics +7").
+- A few shipped defaults use them for every creature: a **grabbed or restrained creature breaks free first** (Escape), and a creature looks for someone who has gone **hidden** (Seek) when nothing nearer needs doing.
+- Step, Stand up, Take cover and the other actions PF2e posts without data can't be detected from chat; record those with **Did this**. Rolled skill actions (Trip, Demoralize, Escape, Seek…) are detected.
+- Tricks only help if their result is on the token. The starter templates have goons pile onto anyone who is *prone* or *grabbed*, but the module reads conditions, not rolls: apply the condition when a Trip or Grapple lands.
 
 ## Applying a template (per token)
 
@@ -76,7 +88,7 @@ Slots like `melee-strike` and `ranged-strike` bind automatically to the creature
 
 ## Starter templates and dry run
 
-Ten starter templates ship with the module, named for **how the creature fights**. They are starting points to tweak. `signature` is a creature's one special move; where a style uses it, bind it to the right spell or action (the token dialog has a slot picker).
+Ten starter templates ship with the module, named for **how the creature fights**. Their rules use the built-in actions and **rotate** them on cooldowns, so a goon trips, then grabs, then bites rather than striking the same way every round; the **Swarmer** is the rank-and-file goon, and its tricks set each other up. They are starting points to tweak. `signature` is a creature's one special move; where a style uses it, bind it to the right spell or action (the token dialog has a slot picker).
 
 | Style | Fights like this | Needs |
 |---|---|---|

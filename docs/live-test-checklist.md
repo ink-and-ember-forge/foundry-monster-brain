@@ -73,6 +73,24 @@ Everything since build step 1 has only been tested against stand-in objects, so 
 - [ ] **The reported case:** signature bound to the *ranged attack*. Roll that attack from the sheet (instead of clicking): the log should show **"Signature action (…)"**, not "Ranged strike", and the plan should move on. Also try with the plan waiting for a plain ranged Strike: then it should log as "Ranged strike".
 - [ ] After the whole plan is done, nothing is suggested until the next turn; the next round starts fresh.
 
+## 5g. Built-in actions, tooltips and the rules popout
+Nothing here has run in Foundry. Use a monster with a melee Strike and a shield if you have one, and two PC tokens.
+- [ ] **Tooltip:** hover the bold action on the strip, and a step in the expanded card. You see the name and cost, a one-line rule, and a "Needs:" line for tricks.
+- [ ] **The ? button** next to an action opens PF2e's own entry (for Trip: the Trip action sheet). Check Step, Demoralize, Create a Diversion, Tumble Through and "Stride away" (it opens Stride) in particular, because their names are looked up in the pack. Rename nothing; if one falls back to a small window with a one-line summary, tell me which.
+- [ ] **A translated or modified PF2e** (if you use one): does the ? still open an entry, or fall back to the summary window?
+- [ ] **Editor:** the action picker is grouped (Attacks, Movement, Dirty tricks, Morale and nerve, Defence, Stealth and senses, Support); picking one shows its tooltip and a ? button; a custom slot has no ? button.
+- [ ] **"+ add action"** in the log lists the same groups.
+- [ ] **Skill modifier:** put a Swarmer or Brawler next to a PC. On a Trip or Grapple step the card shows e.g. "Athletics +7". Is it the number on the creature's sheet?
+- [ ] **Shield (the unverified one):** give a monster a shield item, equipped, and the Brawler template at under 50% HP next to a PC: "Brace behind the shield" is suggested. Unequip or remove the shield: it is held back with "needs a shield". If a creature that really has a shield (a stat-block shield) is reported as having none, tell me what its item looks like.
+- [ ] **Detection:** roll Trip, Grapple, Demoralize, Feint, Seek and Escape from the sheet's actions tab on the monster's turn. Each logs one chip with its own name (not "Melee strike"). Step, Stand and Take Cover are NOT detected (their cards carry no flags): record those with "Did this".
+- [ ] **A Step then a token drag** is one chip, not two.
+- [ ] **Ready** spends two pips, and the plan shows nothing after it.
+- [ ] **Escape:** give the monster *grabbed*. On its turn the strip says "Break free" with Escape first, whatever its template, and it does not suggest moving until the Escape is recorded.
+- [ ] **Trip, then pile on:** put two goons (Swarmer) next to one PC. Goon 1 trips. Set the PC *prone* by hand (PF2e does not apply it from the roll). Goon 2's strip becomes "Pile on the downed". If you do not set prone, goon 2 trips or grabs instead; that is the expected limit.
+- [ ] **Rotation:** watch one Swarmer for four rounds next to a PC. Expect trip, grab, trip, bite, not four Strike-Strikes.
+- [ ] **Hurt goon:** take a Swarmer under 50%: "Back up an ally" (Step, Aid) alternates with its trip.
+- [ ] **Does it feel right?** Is anything too tricky for fodder (too many tricks), or still too samey? Send the template and the situation.
+
 ## 5e. Every suggestion has a target
 - [ ] Across a few turns of different styles, no suggestion ever shows without a target (strip: "Flee → Mira"; card: "Target: Mira (...)").
 - [ ] Coward's Flee names the enemy it's running from, and the hint reads sensibly with that.
@@ -81,7 +99,7 @@ Everything since build step 1 has only been tested against stand-in objects, so 
 
 ## 5d. The ten fighting styles
 Pick two or three styles that match monsters you actually run, put each on a token, and watch a few turns:
-- [ ] Does each one behave like its name says (Brawler charges, Duelist waits for an opening, Ambusher opens big then hides, Swarmer just rushes)?
+- [ ] Does each one behave like its name says (Brawler charges and rotates dirty tricks, Duelist feints and waits for an opening, Ambusher opens big then hides, Swarmer rushes but mixes in tricks)?
 - [ ] Is the one-line description in the token dialog enough to know what you're picking?
 - [ ] Anything that feels wrong for the style (a rule too eager, a wrong target, a missing move)? Send me the style and the situation.
 - [ ] A token you configured before the rename (brute, archer, caster or skittish) still works and shows the new name.

@@ -186,7 +186,9 @@ describe("the reported session: recording a step moves on to the next", () => {
   it("when the token really moved (a drag), the distance is the measured one, with no double count", () => {
     const moved = [e("Mira", 100, { distance: 5, inReach: true })];
     const r = evaluateBrawler({ enemies: moved, taken: [entry("signature"), entry("stride", "auto")] });
-    expect(r.suggestions[0].slugs[0]).toBe("melee-strike");
+    // The drag already put the creature next to Mira: no Stride is added, and none is counted a second time.
+    for (const sug of r.suggestions) expect(sug.slugs, sug.id).not.toContain("stride");
+    expect(r.suggestions.length).toBeGreaterThan(0);
   });
 
   it("a clicked Stride that was later merged with a real drag is not counted twice", () => {
