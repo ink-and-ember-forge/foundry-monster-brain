@@ -9,6 +9,7 @@ import { resolveProfile } from "../scripts/engine/cascade.mjs";
 import { bindSlots } from "../scripts/engine/slots.mjs";
 import { evaluate } from "../scripts/engine/evaluate.mjs";
 import { planBundle } from "../scripts/engine/world.mjs";
+import { spellCastCard, spellAttackRollCard, strikeAttackCard } from "./fixtures/pf2e-v13-chat.mjs";
 
 describe("remainingBundle: what is left to do", () => {
   it("removes what was already done, so the plan advances", () => {
@@ -69,6 +70,30 @@ describe("slotForItem: which slot a detected roll was", () => {
   it("with only auto-bound candidates it prefers the generic Strike the roll looked like", () => {
     const autos = { "ranged-strike": { itemId: "bow", auto: true }, extra: { itemId: "bow", auto: true } };
     expect(slotForItem("bow", autos, { fallbackKey: "ranged-strike" })).toBe("ranged-strike");
+  });
+});
+
+describe("spell cards as PF2e really creates them (source-derived fixtures, v13-dev)", () => {
+  const detect = (card) => classifyContext(card.flags.pf2e.context, card.flags.pf2e.origin, card.flags.pf2e.casting);
+
+  it("a spell with a save or attack is a cast", () => {
+    expect(detect(spellCastCard({ item: "fire", withDefense: true }))).toMatchObject({ key: "spell", itemId: "fire" });
+  });
+  it("a spell WITHOUT one (buff, heal, summon) has no context at all, and is still a cast", () => {
+    const card = spellCastCard({ item: "haste", withDefense: false });
+    expect(card.flags.pf2e.context).toBeUndefined();
+    expect(detect(card)).toMatchObject({ key: "spell", itemId: "haste" });
+  });
+  it("the attack roll made from the cast card is part of the same action, not a Strike", () => {
+    expect(detect(spellAttackRollCard())).toBeNull();
+  });
+  it("a real Strike is still counted, and still says which item it used", () => {
+    expect(detect(strikeAttackCard({ item: "claw9", kind: "melee" }))).toMatchObject({ key: "melee-strike", itemId: "claw9" });
+    expect(detect(strikeAttackCard({ item: "bow", slug: "shortbow", kind: "ranged" }))).toMatchObject({ key: "ranged-strike", itemId: "bow" });
+  });
+  it("nothing to go on is still nothing", () => {
+    expect(classifyContext(undefined, undefined, undefined)).toBeNull();
+    expect(classifyContext(undefined, { uuid: "Actor.a.Item.x", type: "spell" }, undefined)).toBeNull();
   });
 });
 

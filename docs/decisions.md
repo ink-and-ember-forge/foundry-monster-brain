@@ -47,6 +47,12 @@ Under `message.flags.pf2e` (`chat-message/data.ts`):
 - Current-combatant test: `message.speaker.token === combatant.tokenId`, falling back to `context.token` (a UUID ending in the token id).
 - Movement is not a chat card. Detect via `updateToken` on `x`/`y`.
 
+**Corrections and additions from the v13-dev re-verification** (see "v13 verification" below):
+- **A spell only gets a `context` if it has a `defense`** (a save or attack): `item/spell/document.ts:790`. Every cast, defense or not, carries `flags.pf2e.casting` (set only by `SpellPF2e#toMessage`) and `flags.pf2e.origin`. A buff, heal or summon therefore produces a card with **no** `flags.pf2e.context`. Detection keys off `casting` (`engine/detect.mjs`); it used to ignore these casts entirely.
+- **A spell's attack roll looks like a Strike.** `SpellPF2e#rollAttack` goes through the spellcasting entry's Statistic, whose check type is `"attack-roll"` (`item/spellcasting-entry/document.ts:183`), with no identifier, and `action:cast-a-spell` in its options. It used to be logged as a *Melee strike* on top of the cast (and once per ray for multi-attack spells). It is now ignored, because the cast card already counted the action.
+- **Check cards carry less than the notes above implied.** `system/check/check.ts:283-300`: `context.item` is always `undefined`, `identifier` is `null` when absent, and `actor` / `token` are bare ids (`token?.id`), not UUIDs. The current-combatant test (`speaker.token`, falling back to `context.token.endsWith(tokenId)`) works for both.
+- Not detectable from the card: which spell an *attack roll* was for. Not needed, because only the cast card counts.
+
 ### V4: Flanking (v1.1)
 Available: `token.canFlank(flankee)`, `actor.attributes.flanking.{canFlank, flankable}`. Gated by the PF2e flanking automation setting.
 
@@ -55,6 +61,20 @@ No per-turn action tracking found in PF2e (`encounter/`, `actor/base.ts`). The m
 
 ### New: turn hooks
 PF2e fires `pf2e.startTurn(combatant, encounter, userId)` and `pf2e.endTurn(...)` (`encounter/combatant.ts`) after its own turn-start effects run. Prefer these over raw `combatTurn`. Note `onStartTurn` runs per represented actor for troops.
+
+## v13 verification
+
+The module supports v13 and v14 (V1), and the original evidence was all `v14-dev`. Re-checked against `foundryvtt/pf2e` **`v13-dev` @ f38e9796 (2026-04-09), system 7.9.1, Foundry 13.348 to 13.351** by reading the source. (V1's table says `v13-dev` is 7.12.2; the branch tip read here is 7.9.1. One of the two is stale, so re-read the tip before trusting either number.)
+
+**Present and behaving as recorded on v13:** `actor.getReach({ action, weapon })` (`actor/creature/document.ts:93`), `TokenPF2e#distanceTo(target, { reach })` (`canvas/token/object.ts:548`), `actor.conditions.active` and `bySlug`, `condition.value`, `system.movement.speeds` (`land`, `burrow`, `climb`, `fly`, `swim`, `travel`), `actor.alliance` / `isEnemyOf`, `item.range` (`{ increment, max }`) on weapons, NPC melee items and spells, `isMelee` / `isRanged` on all three, spell `range` parsed from text for non-touch spells, the `pf2e.startTurn` / `pf2e.endTurn` hooks, and the strike identifier `${item.id}.${slug}.${melee|ranged}` (`actor/helpers.ts:604`). Area and auto-fire build theirs as `${item.id}.${slug}.${action}` (`actor/helpers.ts:691`).
+
+**Same on v14-dev** (diffed, no relevant change): `getReach`, `movement.speeds`, `distanceTo`, the strike identifier and `chat-message/data.ts` types. `actor/creature/document.ts` and `actor/helpers.ts` have other changes (not read in detail), so re-check before claiming v14 parity for anything not listed here.
+
+**Fixed as a result:** the two spell-detection bugs recorded under V3. Their tests use `tests/fixtures/pf2e-v13-chat.mjs`, cards built from the source with the source line cited beside each field. These are source-derived, not captured from a live game; replace them when a real capture exists.
+
+**Design note, not changed:** the `inReach` flag (used by `enemy-in-reach` and the `in-reach` target preference) calls `getReach({ action: "attack" })` with no weapon, which returns the *largest* reach among the creature's ready attacks (`creature/document.ts:93-120`; it also counts ranged attacks' `reach` traits). The planner, by contrast, uses the reach of the specific bound weapon. For a creature with a 10 ft pike and a 5 ft bite, an enemy at 10 ft is "in reach" for conditions and targeting, while a plan that uses the bite will still add a Stride. That is coherent for "can this creature melee that enemy at all", and wrong only if a rule means "can it use *this* weapon". Left as is; raise it if a live game shows a rule choosing a melee plan it then has to repair.
+
+**Not verifiable from the PF2e source** (needs Foundry core or a live game): whether `ChatMessage.getSpeaker` fills `speaker.token` for a *linked* actor's spell card with several tokens on the scene. Cards with no `context` (buffs) rely on `speaker.token` alone, so this is on the live checklist (section 3).
 
 ## Decided
 

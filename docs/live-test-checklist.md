@@ -23,6 +23,8 @@ Everything since build step 1 has only been tested against stand-in objects, so 
 
 ## 3. Action tracking
 - [ ] Roll a monster Strike: one "Melee strike ×" chip, one action dot empties, damage roll adds nothing.
+- [ ] Cast a spell that has **no save or attack** (a buff such as Haste, or a heal): one "Spell" chip. (Its chat card has no PF2e context, so this relies on `speaker.token`. Try it with a linked actor that has two tokens on the scene, and with an unlinked one.)
+- [ ] Cast an **attack** spell and click its Spell Attack button, including a second time: still exactly one "Spell" chip, no "Melee strike".
 - [ ] Drag the monster's token: one "Stride ×" chip (even if the drag fires several updates).
 - [ ] "Took it" adds the suggested actions as chips; the suggestion changes.
 - [ ] Click a chip's ×: removed; "+ add action" adds one.

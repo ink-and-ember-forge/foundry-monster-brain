@@ -86,7 +86,7 @@ export function onCreateChatMessage(message) {
   const ctxToken = typeof context?.token === "string" ? context.token : "";
   const fromCurrent = (message.speaker?.token && message.speaker.token === c.tokenId) || (c.tokenId && ctxToken.endsWith(c.tokenId));
   if (!fromCurrent) return;
-  const found = classifyContext(context, message.flags?.pf2e?.origin);
+  const found = classifyContext(context, message.flags?.pf2e?.origin, message.flags?.pf2e?.casting);
   if (!found) return;
   // Which of the creature's actions was it? A signature is often one of its Strikes: if the roll was for the
   // item bound to the slot the plan is waiting for, record THAT slot, not just "a ranged Strike".
