@@ -18,9 +18,16 @@
  * @returns {{ key: string, label: string, itemId?: string } | null}
  */
 import { actionLabel } from "./actions.mjs";
+import { isBuiltin } from "./action-catalog.mjs";
 
 const lastSegment = (uuid) => (typeof uuid === "string" && uuid ? uuid.split(".").at(-1) : undefined);
 const CAST_OPTION = "action:cast-a-spell";
+
+/** The PF2e action slug a roll was made for: `action:<slug>` or `action:<slug>:<variant>` in its options. */
+function actionOf(context) {
+  const opt = (context.options ?? []).find((o) => o.startsWith("action:"));
+  return opt?.split(":")[1];
+}
 
 export function classifyContext(context, origin, casting) {
   if (casting && (!context || context.type === "spell-cast")) {
@@ -30,6 +37,9 @@ export function classifyContext(context, origin, casting) {
   switch (context.type) {
     case "attack-roll": {
       if (context.options?.includes(CAST_OPTION)) return null; // a spell's attack roll: the cast card already counted
+      // Escape rolls the unarmed attack modifier (action-macros/basic/escape.ts), so it arrives as an attack roll.
+      const named = actionOf(context);
+      if (named && isBuiltin(named)) return { key: named, label: actionLabel(named) };
       const ranged = String(context.identifier ?? "").split(".").at(-1) === "ranged";
       const key = ranged ? "ranged-strike" : "melee-strike";
       return { key, label: actionLabel(key), itemId: String(context.identifier ?? "").split(".")[0] || undefined };
@@ -41,10 +51,11 @@ export function classifyContext(context, origin, casting) {
       return { key: "ranged-strike", label: "Area/auto-fire", itemId: String(context.identifier ?? "").split(".")[0] || undefined };
     case "self-effect":
       return { key: "other", label: "Use an ability", itemId: lastSegment(context.item) };
-    case "skill-check": {
+    case "skill-check":
+    case "perception-check": {
       // Only checks that are part of an action carry an `action:<slug>` option; plain checks do not count.
-      const opt = (context.options ?? []).find((o) => o.startsWith("action:"));
-      const slug = opt?.split(":")[1];
+      // (Seek is a perception check.)
+      const slug = actionOf(context);
       if (!slug || slug === "strike") return null;
       return { key: slug, label: actionLabel(slug) };
     }

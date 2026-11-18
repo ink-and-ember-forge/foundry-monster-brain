@@ -15,6 +15,8 @@ const speaker = (token = TOKEN) => ({ token });
  * A Strike's attack roll. system/check/check.ts:283-300 builds the context flag: `identifier` is
  * `${item.id}.${attackSlug}.${melee|ranged}` (actor/helpers.ts:604), `item` is always undefined on a check,
  * `actor` and `token` are bare ids (not UUIDs) and `identifier` is null when absent.
+ * `options` is left empty on purpose: a character's Strike carries `action:strike` (character/document.ts:1290),
+ * but that has NOT been verified for an NPC's Strike, so nothing here asserts it.
  */
 export function strikeAttackCard({ item = "claw9", slug = "claw", kind = "melee", token = TOKEN } = {}) {
   return {
@@ -27,7 +29,7 @@ export function strikeAttackCard({ item = "claw9", slug = "claw", kind = "melee"
           item: undefined,
           actor: "a1",
           token,
-          options: ["action:strike", "attack", "attack-roll", "check:type:attack-roll"],
+          options: [],
         },
       },
     },
@@ -54,7 +56,9 @@ export function spellCastCard({ item = "fire", withDefense = true, token = TOKEN
  * The attack roll made from a spell card's button (SpellPF2e#rollAttack, item/spell/document.ts:943). It goes
  * through the spellcasting entry's Statistic, whose check type is "attack-roll" (item/spellcasting-entry/
  * document.ts:183), so it is indistinguishable from a Strike by `type`. It has no identifier and no item
- * (check.ts:286), but `action:cast-a-spell` is passed as an extra roll option and survives into `options`.
+ * (check.ts:286), but `action:cast-a-spell` is passed as an extra roll option (spell/document.ts:951) and
+ * survives into `options` (statistic.ts:509-519). `check:type:attack-roll` is added there too (statistic.ts:513).
+ * Other options a real card carries are not asserted.
  */
 export function spellAttackRollCard({ token = TOKEN } = {}) {
   return {
@@ -67,7 +71,7 @@ export function spellAttackRollCard({ token = TOKEN } = {}) {
           item: undefined,
           actor: "a1",
           token,
-          options: ["action:cast-a-spell", "attack", "attack-roll", "check:type:attack-roll", "spell-attack-roll"],
+          options: ["action:cast-a-spell", "check:type:attack-roll"],
         },
       },
     },
